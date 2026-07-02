@@ -1,0 +1,9 @@
+[package]
+name = "id_handling"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+serde = { version = "1.0.228", features = ["derive"] }
+http = "1.4.2"
+axum = "0.8.9"
