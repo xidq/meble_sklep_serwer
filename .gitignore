@@ -1,0 +1,5 @@
+/target
+/.env
+/src/api/
+/src/api/login/
+/my_database.db

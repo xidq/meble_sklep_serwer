@@ -1,7 +1,9 @@
 use crate::enums_structs::ElementyJson;
-use axum::response::IntoResponse;
+use http::StatusCode;
 
-pub fn get_new_id<T>(mut typ: T,  produkty: &mut Vec<T>) -> Result<(),axum::response::Response>
+pub fn get_new_id<T>(mut typ: T, produkty: &mut Vec<T>) ->
+                                                         // Result<(),axum::response::Response>
+                                                         Result<(), (StatusCode, &'static str)>
 where T: ElementyJson
 {
     if typ.get_id() == 0 {
@@ -23,7 +25,11 @@ where T: ElementyJson
         if let Some(existing) = produkty.iter_mut().find(|p| p.get_id() == typ.get_id()) {
             *existing = typ;
         } else {
-            return Err((http::status::StatusCode::NOT_FOUND, "Produkt o podanym ID nie istnieje w bazie").into_response());
+            // return Err((http::status::StatusCode::NOT_FOUND, "Produkt o podanym ID nie istnieje w bazie").into_response());
+            return Err((
+                StatusCode::NOT_FOUND,
+                "Produkt o podanym ID nie istnieje w bazie"
+            ));
         }
     }
     Ok(())

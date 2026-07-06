@@ -1,0 +1,11 @@
+pub mod main_wczytywanie;
+mod avif;
+mod check_extension;
+mod jpg;
+mod png;
+mod webp;
+mod tga;
+mod qoi;
+mod ff;
+mod unknown;
+mod exr;

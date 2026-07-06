@@ -22,3 +22,6 @@ tower_governor = { workspace = true }
 products = { path = "../products" }
 models = { path = "../models" }
 auth = { path = "../auth" }
+sqlite_serv = { path = "../sqlite_serv" }
+sqlx = { workspace = true}
+#sqlx-sqlite = { workspace = true }

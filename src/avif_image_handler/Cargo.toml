@@ -1,0 +1,17 @@
+[package]
+name = "avif_image_handler"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+tokio = "1.52.3"
+libheif-rs = "2.7.0"
+image = "0.25.10"
+zstd = "0.13.3"
+bzip2 = "0.6.1"
+xz2 = "0.1.7"
+strum = { version = "0.28.0", features = ["derive"] }
+exr = "1.74.0"
+jpeg-decoder = "0.3.2"
+png = "0.18.1"
+webp = "0.3.1"

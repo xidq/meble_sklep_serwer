@@ -30,9 +30,11 @@ pub async fn model_data_storage(
     let mut models = load_models();
 
 
-    match get_new_id(new_model,&mut models) {
-        Ok(_) => {}
-        Err(error_response) => return error_response,
+    match get_new_id(new_model, &mut models) {
+        Ok(_) => {  }
+        Err(error_response) => {
+            return error_response.into_response();
+        }
     }
 
     file_serialisation(MODEL_PATH, models)

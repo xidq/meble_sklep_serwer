@@ -26,9 +26,15 @@ pub async fn add_product_handler(
 
     let mut products = load_products();
 
-    match get_new_id(new_product,&mut products) {
-        Ok(_) => {}
-        Err(error_response) => return error_response,
+    // match get_new_id(new_product,&mut products)? {
+    //     Ok(_) => {}
+    //     Err(error_response) => return error_response,
+    // }
+    match get_new_id(new_product, &mut products) {
+        Ok(_) => {  }
+        Err(error_response) => {
+            return error_response.into_response();
+        }
     }
 
     file_serialisation(PRODUCTS_PATH, products)

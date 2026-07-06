@@ -1,0 +1,15 @@
+[package]
+name = "sqlite_serv"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+sqlx = { workspace = true }
+serde = { workspace = true }
+axum = { workspace = true }
+http = { workspace = true }
+#sqlx-sqlite = { workspace = true }
+serde_json = { workspace = true }
+avif_image_handler = { path = "../avif_image_handler" }
+tokio = { workspace = true }
+axum-macros =  { workspace = true }
