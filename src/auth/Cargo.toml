@@ -12,4 +12,5 @@ rand = { workspace = true }
 login = { path = "../login" }
 serde_json = { workspace = true }
 axum-core = { workspace = true }
+sqlx = { workspace = true }
 

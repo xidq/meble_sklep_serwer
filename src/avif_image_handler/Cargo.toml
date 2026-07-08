@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-tokio = "1.52.3"
+tokio = { workspace = true }
 libheif-rs = "2.7.0"
 image = "0.25.10"
 zstd = "0.13.3"

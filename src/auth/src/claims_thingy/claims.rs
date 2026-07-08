@@ -13,7 +13,7 @@ use crate::jwt::{extract_and_verify_jwt, JWT_SECRET};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
-    pub sub: u64,         // ID użytkownika (Subject)
+    pub sub: i64,         // ID użytkownika (Subject)
     pub username: String, // Nick
     pub role: String,     // Rola, np. "Admin" lub "User"
     pub exp: i64,         // Kiedy token wygasa (Timestamp)

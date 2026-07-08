@@ -4,12 +4,14 @@ use http::status::StatusCode;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
+use axum::extract::State;
+use sqlx::SqlitePool;
 use id_handling::enums_structs::Product;
 
-pub async fn list_products() -> (StatusCode, Json<Vec<Product>>) {
-    let products = load_products();
-    (StatusCode::OK, Json(products))
-}
+// pub async fn list_products() -> (StatusCode, Json<Vec<Product>>) {
+//     let products = load_products();
+//     (StatusCode::OK, Json(products))
+// }
 
 pub fn load_products() -> Vec<Product> {
     let path = Path::new(PRODUCTS_PATH);

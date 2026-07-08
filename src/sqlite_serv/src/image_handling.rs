@@ -1,4 +1,5 @@
-use crate::sql::{get_id_and_name_id, insert_product_image, AppState, Rozdzielczosci};
+use std::collections::{HashMap, HashSet};
+use crate::sql::{get_id_and_name_id, get_product_id_by_nameid, get_product_nameid_by_id, insert_product_image, insert_product_image_product_database, AppState, Rozdzielczosci};
 use avif_image_handler::save::avif_match;
 use avif_image_handler::wczytywanie::main_wczytywanie::wczytaj_pliki;
 use axum::extract::Multipart;
@@ -7,7 +8,9 @@ use axum::response::IntoResponse;
 use sqlx::sqlite::SqlitePool;
 use std::fs::{create_dir, read_dir, remove_file};
 use std::path::PathBuf;
+use serde_json::to_string;
 use tokio::io::AsyncWriteExt;
+use crate::sql_image_handling::db_merge::{ogarnianie_porownania_przedmiotu_i_zdjec_zbieranie_danych, przeslij_plik_graficzny_na_serwer, send_json_to_frontend, LokalizacjaNaFrontendzie};
 
 pub fn image_folders(name: String) -> (PathBuf, String){
     let nazwa_folderu: String = name.split('_')
@@ -106,6 +109,8 @@ pub async fn image_upload_to_server_handle(
     State(state): State<AppState>,
     mut multipart: Multipart,
 ) -> impl IntoResponse {
+
+    println!("rozpoczęto ogarnianie foty");
     let base_path = "src/api/images/queued";
 
     // Zapisywanie plików (I/O)
@@ -127,57 +132,54 @@ pub async fn image_upload_to_server_handle(
 }
 
 pub async fn image_database_compare_and_sht(
-    pool: &SqlitePool,
-) -> Result<(), sqlx::Error>{
-    //pobiera id oraz name_id z bazy
-    let id_vec = get_id_and_name_id(pool).await?;
-
+    pool_baza: &SqlitePool,
+    pool_images: &SqlitePool,
+) -> Result<(), sqlx::Error> {
+    // Pobiera id oraz name_id z bazy produktów (zakładam Vec<(i64, String)>)
+    // let id_vec = get_id_and_name_id(pool_baza).await?;
     let photo_vec = image_handle().await?;
+
+    let mut get_uniques: HashSet<String> = HashSet::new();
+
+    photo_vec.iter().for_each(|nazwa| {
+        let bbb = nazwa.split('_').take(2).collect::<Vec<&str>>().join("_");
+        get_uniques.insert(bbb);
+    });
+
+    // let mut uzyte_id: HashSet<i64> = HashSet::new();
+
+    for xx in &get_uniques{
+        let id = generate_new_id_from_db(pool_baza, &xx).await?;
+        insert_product_image_product_database(pool_baza, &xx, id).await?;
+        // uzyte_id.insert(id);
+        println!("Dodano nowy produkt do bazy mebli: {} (ID: {})", xx, id);
+    };
 
     for photo_name in photo_vec {
         let name_id = photo_name.split('_').take(2).collect::<Vec<&str>>().join("_");
-
-        // 1. Ustalenie ID produktu
-        let product_id = if let Some(&(id, _)) = id_vec.iter().find(|(_, name)| name == &name_id) {
-            id // Produkt istnieje
-        } else {
-            // Produktu nie ma, tworzymy nowy (zwraca nowe ID)
-            generate_new_id_from_db(pool, &name_id).await?
-        };
-
-        // 2. Skanowanie folderu z obrazami dla danego produktu
-        // Ścieżka: src/api/images/{photo_name}
         let folder_path = format!("src/api/images/{}", photo_name);
+
         if let Ok(entries) = std::fs::read_dir(folder_path) {
             for entry in entries.filter_map(|e| e.ok()) {
                 let path = entry.path();
                 if path.is_file() {
-                    // Parsowanie nazwy: produkt_ver_wariant_rozdzielczosc
-                    // Zakładając, że plik to: nazwa_ver_y_z.jpg
                     let file_name = path.file_name().unwrap().to_str().unwrap();
                     let parts: Vec<&str> = file_name.split('_').collect();
 
                     if parts.len() >= 4 {
-                        // Z - rozdzielczość (ostatnia część przed rozszerzeniem)
                         let res_str = parts[3].split('.').next().unwrap_or("0");
                         let res_val: i32 = res_str.parse().unwrap_or(0);
-                        //
-                        // // Konwersja na enum
-                        // if let Ok(res) = res_val {
-                        //     // 3. Aktualizacja/Wstawianie do bazy
-                        //     // Tutaj logika: Sprawdź czy istnieje w product_images, jak tak to UPDATE path, jak nie to INSERT
-                        //     insert_product_image(pool, product_id, res, path.to_str().unwrap()).await?;
-                        // }
+
                         match res_val {
                             16 | 32 | 64 | 128 | 256 | 512 | 1024 | 2048 => {
-                                // Skoro jest to i32 i wiemy, że pasuje do enuma, rzutujemy:
-                                let res: Rozdzielczosci = unsafe { std::mem::transmute(res_val) };
-
-                                // 3. Aktualizacja/Wstawianie do bazy
-                                insert_product_image(pool, product_id, res, path.to_str().unwrap()).await?;
+                                // Rejestrujemy plik w bazie zdjęć, wiążąc go bezpośrednio z name_id
+                                insert_product_image(
+                                    pool_images,
+                                    &name_id,
+                                    path.to_str().unwrap()
+                                ).await?;
                             },
                             _ => {
-                                // Logujemy błąd lub pomijamy plik
                                 println!("Nieobsługiwana rozdzielczość: {}", res_val);
                             }
                         }
@@ -186,10 +188,17 @@ pub async fn image_database_compare_and_sht(
             }
         }
     }
+    for name_id in get_uniques{
+        let id = get_product_id_by_nameid(name_id, pool_baza).await?;
+        let (dane, sciezki) = ogarnianie_porownania_przedmiotu_i_zdjec_zbieranie_danych(id,pool_baza,pool_images).await?;
+        let name_id = get_product_nameid_by_id(id, pool_baza).await?;
+        send_json_to_frontend(&dane, LokalizacjaNaFrontendzie::Images, name_id.clone(), "dane".to_string()).await.expect("TODO: panic message");
+        przeslij_plik_graficzny_na_serwer(sciezki, LokalizacjaNaFrontendzie::Images, name_id ).await.expect("asfsg");
+    }
 
     Ok(())
-
 }
+
 
 
 pub async fn generate_new_id_from_db(

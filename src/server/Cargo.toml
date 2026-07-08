@@ -23,5 +23,6 @@ products = { path = "../products" }
 models = { path = "../models" }
 auth = { path = "../auth" }
 sqlite_serv = { path = "../sqlite_serv" }
+id_handling = { path = "../id_handling" }
 sqlx = { workspace = true}
 #sqlx-sqlite = { workspace = true }

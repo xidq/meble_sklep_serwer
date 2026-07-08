@@ -18,9 +18,11 @@ use sqlx::sqlite::SqlitePoolOptions;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::net::TcpListener;
+use tokio::sync::broadcast;
 use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
 use tower_http::cors::{Any, CorsLayer};
 use websoc::websocet;
+
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>>{
@@ -34,34 +36,60 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
     //         .finish()
     //         .unwrap()
     // );
+    let db_users_url = std::env::var("USERS_DATABASE_URL").expect("USERS_DATABASE_URL musi być ustawiona");
+    let db_images_url = std::env::var("IMAGES_DATABASE_URL").expect("IMAGES_DATABASE_URL musi być ustawiona");
     let database_url = std::env::var("DATABASE_URL")
         .expect("Zmienna DATABASE_URL musi być ustawiona w pliku .env");
 
     // 2. Tworzymy pulę połączeń z bazą danych
+
+    let pool_users = SqlitePoolOptions::new()
+        .max_connections(5)
+        .connect(&db_users_url)
+        .await?;
     let pool = SqlitePoolOptions::new()
         .max_connections(5)
         .connect(&database_url)
         .await?;
 
-    sqlx::migrate!("../../migrations").run(&pool).await?;
+    let pool_images = SqlitePoolOptions::new()
+        .max_connections(5)
+        .connect(&db_images_url)
+        .await?;
+    
+    // sqlx::migrate!("../../migrations").run(&pool).await?;
+    println!("Uruchamianie migracji dla bazy produktów...");
+    sqlx::migrate!("../../migrations/products").run(&pool).await?;
+
+    println!("Uruchamianie migracji dla bazy użytkowników...");
+    sqlx::migrate!("../../migrations/users").run(&pool_users).await?;
+
+    println!("Uruchamianie migracji dla bazy zdjęć...");
+    sqlx::migrate!("../../migrations/images").run(&pool_images).await?;
+
+    println!("Wszystkie bazy danych zostały pomyślnie zsynchronizowane!");
 
     println!("Migracje zakończone sukcesem.");
     let (tx, mut rx) = tokio::sync::mpsc::channel::<()>(32);
 
+    // Tworzymy kanał broadcast (przesyłamy String, czyli zserializowany JSON z produktami)
+    let (ws_broadcast_tx, _) = broadcast::channel::<String>(16);
+
     // Background worker - działa w nieskończonej pętli w tle
-    let worker_pool = pool.clone();
+    let (worker_produkty, worker_img) = (pool.clone(),pool_images.clone());
     tokio::spawn(async move {
         while rx.recv().await.is_some() {
             // Przetwarzanie zdjęć
-            if let Err(e) = image_database_compare_and_sht(&worker_pool).await {
+            if let Err(e) = image_database_compare_and_sht(&worker_produkty, &worker_img).await {
                 eprintln!("Błąd w tle: {}", e);
             }
+            println!("Zakończona pętla zdjęć");
         }
     });
 
     // Zamykamy pulę w naszym stanie aplikacji
 
-    let state = AppState { tx, db: pool };
+    let state = AppState { tx, db: pool , db_usr: pool_users, db_images: pool_images, ws_broadcast_tx,};
 
     let governor_conf = Arc::new(
         GovernorConfigBuilder::default()
@@ -81,7 +109,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
     let app = Router::new()
         .route("/api/login", post(websocet::login_handler))
         .route("/api/register", post(handler::register_handler))
-        .route("/api/products", get(lists::list_products))
+        .route("/api/products", get(sqlite_serv::sql_products::wczytaj::list_products))
         .route("/api/products", post(products::get_items::handler::add_product_handler))
         .route("/api/models", get(models::handle::list_models))
         .route("/api/models", post(models::handle::model_data_storage))

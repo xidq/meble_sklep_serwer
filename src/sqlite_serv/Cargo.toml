@@ -13,3 +13,5 @@ serde_json = { workspace = true }
 avif_image_handler = { path = "../avif_image_handler" }
 tokio = { workspace = true }
 axum-macros =  { workspace = true }
+anyhow = "1.0.103"
+reqwest = "0.13.4"

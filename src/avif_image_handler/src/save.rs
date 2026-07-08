@@ -19,8 +19,8 @@ pub async fn avif_match(
         );
 
         let nazwa_dodatkowa = match x{
-            2048 => "2k",
-            1024 => "1k",
+            2048 => "2048",
+            1024 => "1024",
             512 => "512",
             256 => "256",
             128 => "128",
@@ -31,7 +31,7 @@ pub async fn avif_match(
         };
 
 
-        let (heif_img, _nazwa_bd) = {
+        let heif_img = {
 
             let (w, h) = reskalowanie.to_rgba8().dimensions();
 
@@ -75,7 +75,7 @@ pub async fn avif_match(
                     }
                 }
             }
-            (heif_img, "_8a")
+            heif_img
         };
 
         let qual = EncoderQuality::Lossy(90);
@@ -125,5 +125,34 @@ pub async fn avif_match(
 
 }
 
+#[cfg(test)]
+mod tests {
+    use std::io::{Error, ErrorKind};
+    use std::path::PathBuf;
+    use crate::wczytywanie::main_wczytywanie::wczytaj_pliki;
+    use super::*;
+    #[tokio::test]
+    async fn test_obrobki() -> Result<(), std::io::Error>{
 
+
+        let path_out = PathBuf::from("../test_data/img_out/");
+        let path_in = PathBuf::from("../test_data/img_in/test_1_1.avif");
+        if !path_out.exists() {
+            return Err(Error::new(ErrorKind::NotFound, "zla sciezka ;("));
+        }
+        // let nazwa = String::from("test_1_1");
+        let mut foto: DynamicImage;
+        let mut nazwa: String;
+        match wczytaj_pliki(path_in){
+            Ok(dane) => { (foto, nazwa ) = dane;}
+            Err(e) => return Err(e),
+        };
+        match avif_match(nazwa, foto, &*path_out).await{
+            Ok(_) => {},
+            Err(e) => return Err(e),
+        };
+
+        Ok(())
+    }
+}
 

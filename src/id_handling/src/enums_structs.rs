@@ -5,7 +5,7 @@ pub trait ElementyJson{
     fn get_value(&self) -> u8;
     fn set_id(&mut self, id: u64);
 }
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, sqlx::FromRow)]
 pub struct Product {
     pub(crate) id: u64,
     pub(crate) name: String,
