@@ -12,7 +12,7 @@ opt-level = "z"
 debug = 0
 
 [workspace.dependencies]
-axum = { version = "0.8.9", features = ["ws", "multipart"] }
+axum = { version = "0.8.9", features = ["ws", "multipart", "macros"] }
 serde = { version = "1.0.228", features = ["derive"] }
 tower-http = { version = "0.7.0", features = ["cors"] }
 tokio = { version = "1.52.3", features = ["full"] }
@@ -29,14 +29,30 @@ tower_governor = "0.8.0"
 bcrypt = "0.19.2"
 http = "1.4.2"
 axum-core = "0.5.6"
+rusqlite = { version = "0.40.1", features = ["bundled-sqlcipher", "macros"] }
 sqlx = { version = "0.9.0", features = [
     "runtime-tokio",
     "tls-native-tls",
     "sqlite",
     "macros"
 ] }
+anyhow = "1.0.103"
+reqwest = "0.13.4"
+bzip2 = "0.6.1"
+exr = "1.74.1"
+image = "0.25.10"
+jpeg-decoder = "0.3.2"
+libheif-rs = "2.7.0"
+png = "0.18.1"
+webp = "0.3.1"
+xz2 = "0.1.7"
+zstd = "0.13.3"
+#libsqlite3-sys = { version = "0.38.1", features = ["bundled-sqlcipher"] }
 strum = { version = "0.28.0", features = ["derive"] }
 axum-macros = { version = "0.5.0-rc.1" }
+hex = "0.4.3"
+hmac = "0.13.0"
+sha2 = "0.11.0"
 #sqlx-sqlite = "0.9.0"
 
 #[build-dependencies]

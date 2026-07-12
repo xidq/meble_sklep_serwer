@@ -9,63 +9,47 @@ use axum::{
     routing::{get, post}
     , Router,
 };
-use products::get_items::lists;
-use register::handler;
-use sqlite_serv::handler::{handle_create_product, handle_delete_product, handle_get_product, handle_list_all_products, handle_list_ids_and_names, handle_update_product};
-use sqlite_serv::image_handling::{image_database_compare_and_sht, image_upload_to_server_handle};
 use sqlite_serv::sql::AppState;
-use sqlx::sqlite::SqlitePoolOptions;
+use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use std::net::SocketAddr;
+use std::str::FromStr;
 use std::sync::Arc;
+use axum::http::header::{AUTHORIZATION, CONTENT_TYPE};
+use axum::http::Method;
 use tokio::net::TcpListener;
 use tokio::sync::broadcast;
 use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
 use tower_http::cors::{Any, CorsLayer};
+use sqlite_serv::PEPPER_KEY;
 use websoc::websocet;
 
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>>{
     dotenvy::dotenv().ok();
-    auth::jwt::initialize_jwt_secret();
+    sqlite_serv::auth::jwt::initialize_jwt_secret();
+    let pepper_key = std::env::var("PEPPER_KEY").expect("Brak PEPPER_KEY w .env");
+    PEPPER_KEY.set(pepper_key).expect("Nie udało się zainicjalizować PEPPER_KEY");
 
-    // let governor_conf = Arc::new(
-    //     GovernorConfigBuilder::default()
-    //         .per_second(2)
-    //         .burst_size(5)
-    //         .finish()
-    //         .unwrap()
-    // );
-    let db_users_url = std::env::var("USERS_DATABASE_URL").expect("USERS_DATABASE_URL musi być ustawiona");
-    let db_images_url = std::env::var("IMAGES_DATABASE_URL").expect("IMAGES_DATABASE_URL musi być ustawiona");
-    let database_url = std::env::var("DATABASE_URL")
-        .expect("Zmienna DATABASE_URL musi być ustawiona w pliku .env");
+    let db_url = std::env::var("DATABASE_URL").expect("DATABASE_URL musi być ustawiona");
 
-    // 2. Tworzymy pulę połączeń z bazą danych
 
-    let pool_users = SqlitePoolOptions::new()
-        .max_connections(5)
-        .connect(&db_users_url)
-        .await?;
+
+    // let pool_users = SqlitePoolOptions::new()
+    //     .max_connections(5)
+    //     .connect(&db_users_url)
+    //     .await?;
+
+    // nie szyf db
     let pool = SqlitePoolOptions::new()
         .max_connections(5)
-        .connect(&database_url)
+        .connect(&db_url)
         .await?;
 
-    let pool_images = SqlitePoolOptions::new()
-        .max_connections(5)
-        .connect(&db_images_url)
-        .await?;
     
     // sqlx::migrate!("../../migrations").run(&pool).await?;
-    println!("Uruchamianie migracji dla bazy produktów...");
-    sqlx::migrate!("../../migrations/products").run(&pool).await?;
-
-    println!("Uruchamianie migracji dla bazy użytkowników...");
-    sqlx::migrate!("../../migrations/users").run(&pool_users).await?;
-
-    println!("Uruchamianie migracji dla bazy zdjęć...");
-    sqlx::migrate!("../../migrations/images").run(&pool_images).await?;
+    println!("Uruchamianie migracji dla bazy danych...");
+    sqlx::migrate!("../../migrations/data").run(&pool).await?;
 
     println!("Wszystkie bazy danych zostały pomyślnie zsynchronizowane!");
 
@@ -76,20 +60,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
     let (ws_broadcast_tx, _) = broadcast::channel::<String>(16);
 
     // Background worker - działa w nieskończonej pętli w tle
-    let (worker_produkty, worker_img) = (pool.clone(),pool_images.clone());
-    tokio::spawn(async move {
-        while rx.recv().await.is_some() {
-            // Przetwarzanie zdjęć
-            if let Err(e) = image_database_compare_and_sht(&worker_produkty, &worker_img).await {
-                eprintln!("Błąd w tle: {}", e);
-            }
-            println!("Zakończona pętla zdjęć");
-        }
-    });
+    // let (worker_produkty, worker_img) = (pool.clone(),pool.clone());
+    // tokio::spawn(async move {
+    //     while rx.recv().await.is_some() {
+    //         // Przetwarzanie zdjęć
+    //         if let Err(e) = image_database_compare_and_sht(&worker_produkty, &worker_img).await {
+    //             eprintln!("Błąd w tle: {}", e);
+    //         }
+    //         println!("Zakończona pętla zdjęć");
+    //     }
+    // });
 
     // Zamykamy pulę w naszym stanie aplikacji
 
-    let state = AppState { tx, db: pool , db_usr: pool_users, db_images: pool_images, ws_broadcast_tx,};
+    let state = AppState { /* tx ,*/ db: pool , ws_broadcast_tx};
 
     let governor_conf = Arc::new(
         GovernorConfigBuilder::default()
@@ -102,29 +86,79 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
 
     let cors = CorsLayer::new()
         .allow_origin(Any)
-        .allow_methods(Any)
-        .allow_headers(Any);
+        // .allow_methods(Any)
+        // .allow_headers(Any);
+        .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE])
+        .allow_headers([AUTHORIZATION, CONTENT_TYPE]); // TO JEST KLUCZOWE
 
     // router
     let app = Router::new()
-        .route("/api/login", post(websocet::login_handler))
-        .route("/api/register", post(handler::register_handler))
-        .route("/api/products", get(sqlite_serv::sql_products::wczytaj::list_products))
-        .route("/api/products", post(products::get_items::handler::add_product_handler))
-        .route("/api/models", get(models::handle::list_models))
-        .route("/api/models", post(models::handle::model_data_storage))
-        .route("/api/cart/calculate", post(products::cart::calc::calculate_cart))
-        .route("/ws", get(websocet::ws_handler))
-        .route("/products", get(handle_list_all_products))
-        .route("/products/ids", get(handle_list_ids_and_names))
-        .route("/products/{id}", get(handle_get_product))
-        .route("/products", post(handle_create_product))
-        .route("/products/{id}", put(handle_update_product))
-        // .route("/products/:id", patch(handle_patch_product))
-        .route("/products/{id}", delete(handle_delete_product))
-        // .route("/products/:id/images", post(handle_add_image))
-        // .route("/images/:id", delete(handle_delete_image))
-        .route("/api/images/upload", post(image_upload_to_server_handle))
+        .route(
+            "/usr/login",
+            post(websocet::login_handler)
+        )
+        .route(
+            "/usr/usr",
+            post(sqlite_serv::user::post::handler_user_new)
+                .get(sqlite_serv::user::get::handler_get_user_own_data)
+                .delete(sqlite_serv::user::delete::handler_delete_user_by_user)
+                .put(sqlite_serv::user::put::handle_edit_user_by_user)
+        )
+        .route(
+            "/api/user/orders",
+            get(sqlite_serv::zamowienia::get::handler_get_user_orders)
+        )
+        .route(
+            "/admin/usr",
+            post(sqlite_serv::user::post::handler_user_new)
+                .put(sqlite_serv::user::put::handle_edit_user)
+                .get(sqlite_serv::user::get::handler_user_get_list)
+        )
+        .route(
+            "/admin/usr/{id}",
+            get(sqlite_serv::user::get::handler_get_user_data_by_id) //get user data
+                .delete(sqlite_serv::user::delete::handler_delete_user_by_id)
+                // .put(sqlite_serv::user::put::handle_edit_user) //nie trza id, jest caly user
+                // .delete(sqlite_serv::user::delete::handler_delete_user_by_id)
+        )
+        .route(
+            "/api/products",
+            get(sqlite_serv::product::get::handler_get_products_list)
+                .post(sqlite_serv::product::post::handler_put_product_new) //nowy
+        )
+        .route(
+            "/api/products/name_id/{name_id}",
+            get(sqlite_serv::product::get::handler_get_products_data_by_nameid)
+        )
+        .route(
+            "/api/products/{id}",
+            put(sqlite_serv::product::put::handle_edit_product) //update
+                .get(sqlite_serv::product::get::handler_get_products_data_by_id)
+                .delete(sqlite_serv::product::delete::handler_delete_product_by_id)
+        )
+        .route(
+            "/api/models",
+            get(sqlite_serv::model::get::handler_get_models_list)
+        )
+        .route(
+            "/api/models/{id}",
+            get(sqlite_serv::model::get::handler_get_models_data_by_id)
+        )
+        .route(
+            "/api/models/upload",
+            get(sqlite_serv::model::upload::handler_model_upload_to_server)
+        )
+        .route(
+            "/ws",
+            get(websocet::ws_handler)
+        )
+        .route(
+            "/api/order",
+            post(sqlite_serv::zamowienia::post::handle_put_order_new)
+        )
+        .route(
+            "/api/images/upload/{item_name_id}",
+            post(sqlite_serv::foto::upload::handler_image_upload_to_server))
         .layer(DefaultBodyLimit::max(10 * 1024 * 1024))
         // rate-limiter
         .layer(governor_layer)
@@ -144,3 +178,4 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
         ?;
     Ok(())
 }
+

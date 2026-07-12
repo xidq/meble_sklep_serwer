@@ -7,7 +7,8 @@ use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
 use anyhow::Result;
 use serde::de::Unexpected::Str;
-use crate::sql::{get_id_and_name_id, get_images_according_to_id_name, get_product_data_by_id, Product};
+use id_handling::enums_structs::Product;
+use crate::sql::{get_id_and_name_id, get_images_according_to_id_name, get_product_data_by_id};
 
 // #[derive(Serialize, Deserialize, Clone, Debug)]
 // pub struct DbMerge{
@@ -60,7 +61,7 @@ impl Default for ZdjeciaNaSerwerNorm{
 impl LokalizacjaNaFrontendzie {
     pub fn get_localisation(&self) -> String{
         match self {
-            Self::Images => "img/img_front/".to_string(),
+            Self::Images => "data/img_front/".to_string(),
             Self::Data => "data/".to_string(),
         }
     }
@@ -94,7 +95,7 @@ pub async fn ogarnianie_porownania_przedmiotu_i_zdjec_zbieranie_danych(
 
 }
 pub fn zmiany_sciezek_fot_pod_serwer(dane: Vec<String>) -> Vec<String> {
-    let sciezka_bazowa = "../img/img_front/";
+    let sciezka_bazowa = "../data/img_front/";
     let znacznik = "images/";
 
     dane.iter()

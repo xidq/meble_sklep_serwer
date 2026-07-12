@@ -1,22 +1,23 @@
-use axum::extract::ws::{Message, WebSocket};
-use axum::Json;
-use axum::response::IntoResponse;
-use chrono::{Duration, Utc};
-use jsonwebtoken::{encode, EncodingKey, Header};
-use axum::http::StatusCode;
-use axum::extract::{State, WebSocketUpgrade};
-use futures_util::{SinkExt, StreamExt};
-use auth::claims_thingy::claims::Claims;
-use auth::jwt::{get_user_by_username, JWT_SECRET};
-use sqlite_serv::sql::AppState;
-use crate::{requests};
 use crate::response::login::LoginResponse;
-use id_handling::enums_structs::Product;
-
+use crate::requests;
+use axum::extract::ws::{Message, WebSocket};
+use axum::extract::{State, WebSocketUpgrade};
+use axum::http::StatusCode;
+use axum::response::IntoResponse;
+use axum::Json;
+use chrono::{Duration, Utc};
+use futures_util::{SinkExt, StreamExt};
+use jsonwebtoken::{encode, EncodingKey, Header};
+use sqlite_serv::auth::claims::Claims;
+use sqlite_serv::auth::jwt::JWT_SECRET;
+use sqlite_serv::product::get::get_products_list;
+use sqlite_serv::sql::AppState;
+use sqlite_serv::user::get::get_user_by_username;
 
 pub async fn ws_handler(
     ws: WebSocketUpgrade,
     State(state): State<AppState>,
+    // claims: Claims,
 ) -> impl IntoResponse {
     ws.on_upgrade(|socket| handle_socket(socket, state))
 }
@@ -26,12 +27,8 @@ pub async fn login_handler(
     Json(payload): Json<requests::login::LoginRequest>
 ) -> impl IntoResponse {
 
-    println!("Próba pobrania produktów z bazy...");
-    let produkty = pobierz_produkty_jako_json(&state.db).await;
-    println!("Wynik pobrania: {:?}", produkty);
-
     // Szukamy użytkownika bezpośrednio w bazie za pomocą nowej funkcji
-    let found_user = match get_user_by_username(&state.db_usr, &payload.username).await {
+    let found_user = match get_user_by_username(&state.db, &payload.username).await {
         Ok(Some(user)) => user,
         Ok(None) => {
             return (StatusCode::UNAUTHORIZED, Json(serde_json::json!({ "error": "Użytkownik nie istnieje" }))).into_response();
@@ -41,6 +38,8 @@ pub async fn login_handler(
             return (StatusCode::INTERNAL_SERVER_ERROR, "Błąd serwera").into_response();
         }
     };
+
+    println!("login_handler found username {:?}", &found_user);
 
     // Weryfikacja hasła (wykorzystuje dokładnie tę samą metodę struktury User, co wcześniej)
     if found_user.verify_password(&payload.password) {
@@ -52,7 +51,7 @@ pub async fn login_handler(
 
         let claims = Claims {
             sub: found_user.id,
-            username: found_user.name.clone(),
+            username: found_user.username.clone(),
             role: format!("{:?}", found_user.permission),
             exp: expiration,
         };
@@ -62,7 +61,7 @@ pub async fn login_handler(
                 StatusCode::OK,
                 Json(LoginResponse {
                     token,
-                    username: found_user.name.clone(),
+                    username: found_user.username.clone(),
                     role: format!("{:?}", found_user.permission),
                 })
             ).into_response(),
@@ -73,18 +72,20 @@ pub async fn login_handler(
     }
 }
 
-pub async fn handle_socket(socket: WebSocket, state: AppState) -> () {
+pub async fn handle_socket(socket: WebSocket, state: AppState) {
     let (mut sender, mut receiver) = socket.split();
 
     println!("Nowy klient połączył się przez WebSocket");
 
-    // --- WYSYŁANE DANE NA "DZIEŃ DOBRY" ---
-    // Gdy klient (np. tablet) się połączy, od razu ładujemy mu aktualną listę
-    if let Ok(aktualne_produkty) = pobierz_produkty_jako_json(&state.db).await {
-        let _ = sender.send(Message::Text(aktualne_produkty.into())).await;
-    }
-
-    // Zadanie odbierające (bez zmian - loguje wiadomości od klienta)
+    // let auth_msg = serde_json::json!({
+    //     "type": "auth",
+    //     "username": claims.username,
+    //     "role": claims.role
+    // });
+    //
+    // // Wysyłamy powitanie przed pętlą z produktami
+    // let _ = sender.send(Message::Text(auth_msg.to_string().into())).await;
+    // Zadanie odbierające loguje wiadomości od klienta
     let mut recv_task = tokio::spawn(async move {
         while let Some(Ok(msg)) = receiver.next().await {
             if let Message::Text(text) = msg {
@@ -94,27 +95,31 @@ pub async fn handle_socket(socket: WebSocket, state: AppState) -> () {
         println!("Klient rozłączył się (nasłuchiwanie przerwane).");
     });
 
+    // Zadanie wysyłające do klienta
     let mut send_task = tokio::spawn(async move {
         let mut rx = state.ws_broadcast_tx.subscribe();
 
-        // 1. DANE STARTOWE
-        if let Ok(json) = pobierz_produkty_jako_json(&state.db).await {
+        // 1. DANE STARTOWE (Wysyłamy tylko RAZ)
+        // Używamy Twojej istniejącej funkcji get_products_list
+        if let Ok(produkty) = get_products_list(&state.db).await {
+            let json = serde_json::to_string(&produkty).unwrap_or_else(|_| "[]".to_string());
+
             if let Err(e) = sender.send(Message::Text(json.into())).await {
-                eprintln!("BŁĄD wysyłki początkowej: {}", e); // <--- ZOBACZ TO W LOGACH!
-                return;
+                eprintln!("BŁĄD wysyłki początkowej: {}", e);
+                return; // Klient się rozłączył zanim zdążyliśmy wysłać, kończymy task
             }
         }
 
         // 2. PĘTLA BROADCAST
         while let Ok(msg) = rx.recv().await {
             if let Err(e) = sender.send(Message::Text(msg.into())).await {
-                eprintln!("BŁĄD wysyłki broadcast: {}", e); // <--- ZOBACZ TO W LOGACH!
-                break;
+                eprintln!("BŁĄD wysyłki broadcast: {}", e);
+                break; // Kończymy pętlę w przypadku błędu wysyłki
             }
         }
     });
 
-    // Pilnowanie zakończenia zadań
+    // Pilnowanie zakończenia zadań – jeśli jedno padnie/zakończy się, ubijamy drugie
     tokio::select! {
         _ = (&mut recv_task) => send_task.abort(),
         _ = (&mut send_task) => recv_task.abort(),
@@ -123,13 +128,13 @@ pub async fn handle_socket(socket: WebSocket, state: AppState) -> () {
     println!("Czyszczenie zasobów dla rozłączonego klienta zakończone.");
 }
 
-async fn pobierz_produkty_jako_json(pool: &sqlx::SqlitePool) -> Result<String, sqlx::Error> {
-    let produkty: Vec<Product> = sqlx::query_as::<_, Product>(
-        "SELECT id, name, ... FROM products"
-    )
-        .fetch_all(pool)
-        .await?;
-
-    let json = serde_json::to_string(&produkty).unwrap_or_else(|_| "[]".to_string());
-    Ok(json)
-}
+// async fn pobierz_produkty_jako_json(pool: &sqlx::SqlitePool) -> Result<String, sqlx::Error> {
+//     let produkty: Vec<Product> = sqlx::query_as::<_, Product>(
+//         "SELECT id, name, ... FROM products"
+//     )
+//         .fetch_all(pool)
+//         .await?;
+// 
+//     let json = serde_json::to_string(&produkty).unwrap_or_else(|_| "[]".to_string());
+//     Ok(json)
+// }

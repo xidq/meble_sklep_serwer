@@ -10,19 +10,14 @@ tower-http = { workspace = true }
 tokio = { workspace = true }
 serde_json = { workspace = true }
 futures-util = { workspace = true }
-#tokio-tungstenite = { workspace = true }
 chrono = { workspace = true }
 login = { path = "../login" }
 jsonwebtoken = { workspace = true }
 regex = { workspace = true }
-#rand = "0.9.4"
 dotenvy = { workspace = true }
-#tower = { version = "0.5.3", features = ["limit"] }
 tower_governor = { workspace = true }
 products = { path = "../products" }
 models = { path = "../models" }
-auth = { path = "../auth" }
 sqlite_serv = { path = "../sqlite_serv" }
 id_handling = { path = "../id_handling" }
 sqlx = { workspace = true}
-#sqlx-sqlite = { workspace = true }

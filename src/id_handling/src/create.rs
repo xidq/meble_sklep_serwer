@@ -7,7 +7,7 @@ pub fn get_new_id<T>(mut typ: T, produkty: &mut Vec<T>) ->
 where T: ElementyJson
 {
     if typ.get_id() == 0 {
-        let prefix = typ.get_value() as u64;
+        let prefix = typ.get_value() as i64;
 
         let base_multiplier = 1_000_000_000;
         let base_id = prefix * base_multiplier;
