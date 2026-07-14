@@ -4,23 +4,23 @@ pub mod register;
 pub mod websoc;
 
 use axum::extract::DefaultBodyLimit;
-use axum::routing::{delete, put};
+use axum::http::header::{AUTHORIZATION, CONTENT_TYPE};
+use axum::http::Method;
+use axum::routing::put;
 use axum::{
     routing::{get, post}
     , Router,
 };
 use sqlite_serv::sql::AppState;
-use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+use sqlite_serv::PEPPER_KEY;
+use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions};
 use std::net::SocketAddr;
 use std::str::FromStr;
 use std::sync::Arc;
-use axum::http::header::{AUTHORIZATION, CONTENT_TYPE};
-use axum::http::Method;
 use tokio::net::TcpListener;
 use tokio::sync::broadcast;
 use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
 use tower_http::cors::{Any, CorsLayer};
-use sqlite_serv::PEPPER_KEY;
 use websoc::websocet;
 
 
@@ -33,19 +33,50 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
 
     let db_url = std::env::var("DATABASE_URL").expect("DATABASE_URL musi być ustawiona");
 
+    #[cfg(docker)]
+    if db_url.starts_with("sqlite://") {
+        let path_str = db_url.trim_start_matches("sqlite://");
+        if let Some(parent_dir) = Path::new(path_str).parent() {
+            if !parent_dir.exists() && parent_dir.as_os_str() != "" {
+                fs::create_dir_all(parent_dir)?;
+                println!("Utworzono katalog dla bazy danych: {:?}", parent_dir);
+            }
+        }
+    }
 
-
+    // 4. BEZPIECZNA KONFIGURACJA SQLITE DLA DOCKERA
+    // Zamiast prostego .connect(), konfigurujemy bazę do stabilnej pracy w kontenerze
+    #[cfg(docker)]
+    let connection_options = SqliteConnectOptions::from_str(&db_url)?
+        .create_if_missing(true) // Tworzy plik bazy automatycznie, jeśli go nie ma
+        .journal_mode(SqliteJournalMode::Wal) // Tryb WAL - kluczowy przy wielu zapytaniach
+        .busy_timeout(std::time::Duration::from_secs(5)); // Unikamy błędów "database is locked"
     // let pool_users = SqlitePoolOptions::new()
     //     .max_connections(5)
     //     .connect(&db_users_url)
     //     .await?;
 
     // nie szyf db
-    let pool = SqlitePoolOptions::new()
-        .max_connections(5)
-        .connect(&db_url)
-        .await?;
+    // let pool = SqlitePoolOptions::new()
+    //     .max_connections(5)
+    //     .connect(&db_url)
+    //     .await?;
+    let pool = if cfg!(docker) {
+        let connection_options = SqliteConnectOptions::from_str(&db_url)?
+            .create_if_missing(true)
+            .journal_mode(SqliteJournalMode::Wal)
+            .busy_timeout(std::time::Duration::from_secs(5));
 
+        SqlitePoolOptions::new()
+            .max_connections(5)
+            .connect_with(connection_options) // <--- TUTAJ używamy opcji!
+            .await?
+    } else {
+        SqlitePoolOptions::new()
+            .max_connections(5)
+            .connect(&db_url)
+            .await?
+    };
     
     // sqlx::migrate!("../../migrations").run(&pool).await?;
     println!("Uruchamianie migracji dla bazy danych...");
@@ -54,7 +85,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
     println!("Wszystkie bazy danych zostały pomyślnie zsynchronizowane!");
 
     println!("Migracje zakończone sukcesem.");
-    let (tx, mut rx) = tokio::sync::mpsc::channel::<()>(32);
+    // let (tx, mut rx) = tokio::sync::mpsc::channel::<()>(32);
 
     // Tworzymy kanał broadcast (przesyłamy String, czyli zserializowany JSON z produktami)
     let (ws_broadcast_tx, _) = broadcast::channel::<String>(16);
@@ -165,7 +196,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
         .layer(cors)
         .with_state(state);
 
-    let addr = SocketAddr::from(([127, 0, 0, 1], 8080));
+    // #[cfg(docker)]
+    // let port = std::env::var("PORT").unwrap_or_else(|_| "8080".to_string());
+    // #[cfg(docker)]
+    // let addr_str = format!("0.0.0.0:{}", port);
+    // #[cfg(docker)]
+    let addr = if cfg!(docker) {
+        let port = std::env::var("PORT").unwrap_or_else(|_| "8080".to_string());
+        let addr_str = format!("0.0.0.0:{}", port);
+        SocketAddr::from_str(&addr_str)
+            .unwrap_or_else(|_| SocketAddr::from(([0, 0, 0, 0], 8080)))
+    } else {
+        SocketAddr::from(([127, 0, 0, 1], 8080))
+    };
+    // let addr = SocketAddr::from_str(&addr_str)
+    //     .unwrap_or_else(|_| SocketAddr::from(([0, 0, 0, 0], 8080)));
+    //
+    // let addr = SocketAddr::from(([127, 0, 0, 1], 8080));
     println!("Serwer działa na http://{}", addr);
 
     let listener = TcpListener::bind(addr).await.unwrap();

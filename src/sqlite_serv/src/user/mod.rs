@@ -78,7 +78,6 @@ pub fn get_pepper_key() -> &'static [u8] {
     // std::env::var("PEPPER_KEY").expect("Brak PEPPER_KEY w .env")
 }
 impl User {
-    // Usunięto `&self` z argumentów. Dodano `impl Into<String>` dla wygody.
     pub fn new(
         username: impl Into<String>,
         name: Option<String>,

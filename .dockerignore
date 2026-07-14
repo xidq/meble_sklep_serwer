@@ -1,0 +1,18 @@
+# Ignoruj ogromne foldery z kompilacją Rusta (to one ważą najwięcej!)
+target/
+
+# Ignoruj lokalne pliki baz danych SQLite
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+local_backup.db
+db_data/
+
+# Ignoruj konfiguracje i środowisko deweloperskie
+.git/
+.env
+
+# Jeśli masz tam jakieś pliki frontendowe/node
+src/api/
+dist/

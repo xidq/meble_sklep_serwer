@@ -39,7 +39,7 @@ pub async fn login_handler(
         }
     };
 
-    println!("login_handler found username {:?}", &found_user);
+    println!("login_handler found username {:?}", found_user);
 
     // Weryfikacja hasła (wykorzystuje dokładnie tę samą metodę struktury User, co wcześniej)
     if found_user.verify_password(&payload.password) {

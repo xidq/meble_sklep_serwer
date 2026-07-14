@@ -4,11 +4,17 @@ members = [
     "src/login", "src/auth", "src/products", "src/models", "src/id_handling", "src/sqlite_serv", "src/avif_image_handler",
 ]
 
+
 resolver = "3"
 [profile.release]
 panic = "abort"
 strip = true
 opt-level = "z"
+debug = 0
+
+[profile.docker]
+inherits = "release" # Dziedziczy podstawy z release (np. strip, panic = abort)
+opt-level = 3        # OSOBNE OPTYMALIZACJE (np. agresywna optymalizacja pod prędkość działania)
 debug = 0
 
 [workspace.dependencies]
@@ -37,7 +43,7 @@ sqlx = { version = "0.9.0", features = [
     "macros"
 ] }
 anyhow = "1.0.103"
-reqwest = "0.13.4"
+reqwest = { version = "0.13.4", features = ["multipart", "json"] }
 bzip2 = "0.6.1"
 exr = "1.74.1"
 image = "0.25.10"

@@ -5,7 +5,7 @@ pub async fn put_model_add_to_database(pool: &SqlitePool, new_product: &Model) -
 
     // Zamieniamy BTreeMap na czysty tekst (JSON)
     let model_json = serde_json::to_string(&new_product.model)
-        .map_err(|e| sqlx::Error::Protocol(format!("Błąd serializacji JSON: {}", e).into()))?;
+        .map_err(|e| sqlx::Error::Protocol(format!("Błąd serializacji JSON: {}", e)))?;
 
     sqlx::query(
         r#"

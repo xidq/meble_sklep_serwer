@@ -14,7 +14,7 @@ pub async fn handle_edit_user(
     claims: Claims,
     Json(payload): Json<User>,
 ) -> Result<StatusCode, (StatusCode, String)> {
-    println!("Odebrano żądanie zmiany produktu id: {}", &payload.id);
+    println!("Odebrano żądanie zmiany produktu id: {}", payload.id);
     check_is_admin(&claims)?;
     edit_user(
         &state.db,

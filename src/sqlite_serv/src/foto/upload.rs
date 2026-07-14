@@ -40,12 +40,12 @@ pub async fn handler_image_upload_to_server(
         let file_name = field.file_name().unwrap_or("unknown.jpg").to_string();
         let path = std::path::Path::new(&queued_path).join(&file_name);
 
-        if let Ok(data) = field.bytes().await {
-            if let Ok(mut file) = tokio::fs::File::create(&path).await {
+        if let Ok(data) = field.bytes().await
+            && let Ok(mut file) = tokio::fs::File::create(&path).await {
                 if file.write_all(&data).await.is_ok() {
                     saved_files.push(path);
                 }
-            }
+
         }
     }
 
@@ -55,7 +55,7 @@ pub async fn handler_image_upload_to_server(
     let name_id_clone = item_name_id.clone();
 
     tokio::spawn(async move {
-        background_image_processor(db_pool, id, name_id_clone, saved_files).await;
+        let _ = background_image_processor(db_pool, id, name_id_clone, saved_files).await;
     });
 
     // 5. Natychmiastowa odpowiedź do klienta, nie czekamy na AVIF!
@@ -170,7 +170,7 @@ pub async fn images_upsert_in_database(pool: &SqlitePool, product: &FotoData) ->
 
     // Zwijamy BTreeMap do płaskiego JSON-a
     let images_json = serde_json::to_string(&product.warianty_zdjec)
-        .map_err(|e| sqlx::Error::Protocol(format!("Błąd serializacji JSON: {}", e).into()))?;
+        .map_err(|e| sqlx::Error::Protocol(format!("Błąd serializacji JSON: {}", e)))?;
 
     sqlx::query(
         r#"

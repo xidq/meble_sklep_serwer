@@ -27,7 +27,7 @@ pub async fn files_send_to_server(
         .unwrap_or_else(|_| "http://localhost:8081/".to_string());
 
     let serwer_adres = format!("{}api/produkty/{}", frontend_server, modyfikator);
-    println!("będę wysyłał na adres: {}", &serwer_adres);
+    println!("będę wysyłał na adres: {}", serwer_adres);
     // 1. Inicjujemy pusty formularz multipart
     let mut form = Form::new();
 
@@ -91,7 +91,7 @@ pub async fn json_send_to_server(
 
     // Używamy endpointu, który w Node.js obsługuje JSON-a i wywołuje rebuildRouterJson()
     let serwer_adres = format!("{}api/upload/json/{}/{}", frontend_server, typ.str(), modyfikator);
-    println!("będę wysyłał na adres: {}", &serwer_adres);
+    println!("będę wysyłał na adres: {}", serwer_adres);
 
     let response = client
         .post(&serwer_adres)

@@ -52,12 +52,12 @@ pub async fn handler_model_upload_to_server(
         let file_name = field.file_name().unwrap_or("unknown").to_string();
         let path = std::path::Path::new(&base_path).join(&file_name);
 
-        if let Ok(data) = field.bytes().await {
-            if let Ok(mut file) = tokio::fs::File::create(&path).await {
+        if let Ok(data) = field.bytes().await
+            && let Ok(mut file) = tokio::fs::File::create(&path).await {
                 if file.write_all(&data).await.is_ok() {
                     vec_sciezki_plikow.push(path);
                 }
-            }
+
         }
     }
 
@@ -126,7 +126,7 @@ pub async fn model_upsert_in_database(pool: &SqlitePool, product: &Model) -> Res
 
     // Zamieniamy BTreeMap na JSON (tak samo jak wcześniej)
     let model_json = serde_json::to_string(&product.model)
-        .map_err(|e| sqlx::Error::Protocol(format!("Błąd serializacji JSON: {}", e).into()))?;
+        .map_err(|e| sqlx::Error::Protocol(format!("Błąd serializacji JSON: {}", e)))?;
 
     // Magia dzieje się w zapytaniu SQL:
     sqlx::query(

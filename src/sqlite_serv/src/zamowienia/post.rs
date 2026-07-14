@@ -21,10 +21,10 @@ pub async fn handle_put_order_new(
     // println!("zebrane dane do zamowienia: {:?}", payload);
 
 
-    println!("DEBUG: Token sub b4 teraz claims nie maybeclaims (user_id) = {:?}", &maybe_claims.sub);
+    println!("DEBUG: Token sub b4 teraz claims nie maybeclaims (user_id) = {:?}", maybe_claims.sub);
     payload.dane.user_id = Some(maybe_claims.sub);
-    println!("DEBUG: Token sub (user_id) = {:?}", &payload.dane.user_id);
-    println!("zebrane dane do zamowienia: {:?}", &payload);
+    println!("DEBUG: Token sub (user_id) = {:?}", payload.dane.user_id);
+    println!("zebrane dane do zamowienia: {:?}", payload);
 
     let nowe_zamowienie = Zamowienie::new(
         payload.dane.user_id,
@@ -64,7 +64,7 @@ pub async fn put_order_new(
                                cena, numer_fv, oplacone)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"#
     )
-        .bind(&new_order.user_id.unwrap())
+        .bind(new_order.user_id.unwrap())
         .bind(&new_order.date)
         .bind(&new_order.email)
         .bind(&new_order.tel)

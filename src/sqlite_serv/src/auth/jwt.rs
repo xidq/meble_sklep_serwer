@@ -95,7 +95,7 @@ pub fn initialize_jwt_secret() {
         let mut dynamic_key = [0u8; 32];
         rand::rng().fill(&mut dynamic_key);
 
-        JWT_SECRET.set(dynamic_key.to_vec()).expect("Błąd inicjalizacji klucza (debug)");
+        JWT_SECRET.set(dynamic_key.to_vec()).expect("Błąd inicjalizacji klucza (release)");
         println!("🔑 RELEASE: Wygenerowano losowy klucz JWT.");
     }
 
@@ -103,9 +103,9 @@ pub fn initialize_jwt_secret() {
     #[cfg(debug_assertions)]
     {
         let secret = std::env::var("JWT_SECRET_KEY")
-            .expect("W trybie release zmienna JWT_SECRET_KEY jest wymagana!");
+            .expect("W trybie debug zmienna JWT_SECRET_KEY jest wymagana!");
 
-        JWT_SECRET.set(secret.into_bytes()).expect("Błąd inicjalizacji klucza (release)");
+        JWT_SECRET.set(secret.into_bytes()).expect("Błąd inicjalizacji klucza (debug)");
         println!("🔑 DEBUG: Załadowano klucz JWT z konfiguracji.");
     }
 }

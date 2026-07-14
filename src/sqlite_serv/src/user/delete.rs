@@ -45,10 +45,10 @@ pub async fn handler_delete_user_by_id(
     let rows_affected = delete_user_by_id(&state.db, id)
         .await
         .map_err(|e| {
-            if let sqlx::Error::Database(db_err) = &e {
-                if db_err.is_foreign_key_violation() {
+            if let sqlx::Error::Database(db_err) = &e &&
+                db_err.is_foreign_key_violation() {
                     return (StatusCode::CONFLICT, "Nie można usunąć użytkownika, ponieważ znajduje się w zamówieniach.".to_string());
-                }
+
             }
 
             eprintln!("Błąd bazy danych przy usuwaniu: {}", e);

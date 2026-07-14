@@ -56,7 +56,7 @@ pub struct ZamowieniePozycja{
 }
 #[derive(sqlx::FromRow)]
 struct LastOrderData{
-    date: String,
+    _date: String,
     number: String,
 }
 pub async fn generate_fv_number(pool: &SqlitePool) -> Result<String, sqlx::Error> {
