@@ -1,4 +1,4 @@
-use crate::sql::AppState;
+use crate::AppState;
 use axum::extract::State;
 use axum::http::StatusCode;
 use sqlx::SqlitePool;

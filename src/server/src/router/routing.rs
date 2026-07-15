@@ -7,9 +7,11 @@ use axum::routing::{get, post, put};
 use tower_governor::governor::GovernorConfigBuilder;
 use tower_governor::GovernorLayer;
 use tower_http::cors::{Any, CorsLayer};
-use sqlite_serv::sql::AppState;
+use sqlite_serv::AppState;
 use crate::websoc::websocet;
 
+/// Function that handles routing from external server
+/// [GET, POST, PUT and DELETE]
 pub fn build_router(state: AppState) -> Router {
 
     let cors = CorsLayer::new()
@@ -17,7 +19,7 @@ pub fn build_router(state: AppState) -> Router {
         // .allow_methods(Any)
         // .allow_headers(Any);
         .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE])
-        .allow_headers([AUTHORIZATION, CONTENT_TYPE]); // TO JEST KLUCZOWE
+        .allow_headers([AUTHORIZATION, CONTENT_TYPE]);
 
     let governor_conf = Arc::new(
         GovernorConfigBuilder::default()
@@ -96,6 +98,7 @@ pub fn build_router(state: AppState) -> Router {
             "/api/images/upload/{item_name_id}",
             post(sqlite_serv::foto::upload::handler_image_upload_to_server))
         .layer(DefaultBodyLimit::max(10 * 1024 * 1024))
+        // rate limiter jest na innym serwerze, a komunikacja pomiędzy serwerami fajnie jakby była nie ograniczona
         // rate-limiter
         .layer(governor_layer)
         .layer(cors)

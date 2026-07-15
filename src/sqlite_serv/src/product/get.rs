@@ -1,5 +1,5 @@
 use crate::product::{Product, ProductMapping};
-use crate::sql::AppState;
+use crate::AppState;
 use axum::extract::State;
 use axum::Json;
 use http::StatusCode;

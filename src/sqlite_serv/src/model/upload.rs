@@ -1,6 +1,6 @@
 use crate::model::Model;
 use crate::product::get::get_products_id_by_nameid;
-use crate::sql::AppState;
+use crate::AppState;
 use axum::extract::{Multipart, State};
 use axum::Json;
 use http::StatusCode;

@@ -4,7 +4,7 @@ use http::StatusCode;
 use sqlx::Row;
 use sqlx::sqlite::SqliteRow;
 use crate::auth::claims::Claims;
-use crate::sql::AppState;
+use crate::AppState;
 use crate::zamowienia::{Zamowienie, ZamowienieFV, ZamowienieLokacja};
 
 pub async fn handler_get_user_orders(

@@ -1,4 +1,4 @@
-use crate::sql::AppState;
+use crate::AppState;
 use crate::user::{RegisterRequest, User};
 use axum::extract::State;
 use axum::response::IntoResponse;
@@ -6,6 +6,7 @@ use axum::Json;
 use http::StatusCode;
 use regex::Regex;
 
+/// Create new user with login, password, 2nd password (double verification) and email
 pub async fn handler_user_new(
     State(state): State<AppState>,
     Json(payload): Json<RegisterRequest>,
@@ -16,13 +17,13 @@ pub async fn handler_user_new(
     let email_ref = email.as_ref();
     let name = payload.name;
 
-    // 1. Walidacja loginu (Regex)
+    // val loginu (Regex)
     let username_regex = Regex::new(r"^[a-zA-Z0-9_]{3,20}$").unwrap();
     if !username_regex.is_match(username) {
         return (
             StatusCode::BAD_REQUEST,
             Json(serde_json::json!({
-                "error": "Login musi mieć od 3 do 20 znaków i zawierać tylko litery, cyfry oraz znak '_'"
+                "error": "Login musi mieć od 3 do 20 znaków i może zawierać tylko litery, cyfry oraz znak '_'"
             }))
         ).into_response();
     }
@@ -31,12 +32,12 @@ pub async fn handler_user_new(
         return (StatusCode::BAD_REQUEST, Json(serde_json::json!({"error": "Hasła nie są identyczne"}))).into_response();
     }
 
-    // 2. Walidacja formatu emaila
+    // email val (2nd verification)
     if !email_ref.is_some_and(|cc| cc.contains("@")) || email_ref.is_some_and(|xx| xx.len() < 5) {
         return (StatusCode::BAD_REQUEST, Json(serde_json::json!({"error": "Niepoprawny format emaila"}))).into_response();
     }
 
-    // 2. Walidacja hasła
+    // pass val
     if password.len() < 8 || password.len() > 100 {
         return (
             StatusCode::BAD_REQUEST,
@@ -46,26 +47,23 @@ pub async fn handler_user_new(
         ).into_response();
     }
 
-    // 3. Hashowanie hasła
-    // Baza sama nadaje ID, więc do Twojej funkcji User::new przekazujemy dummy id (np. 0)
+    // pass hash
     let new_user = match User::new(username, name, email.clone(), password) {
         Ok(user) => user,
         Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": "Błąd hashowania" }))).into_response(),
     };
 
-    // Zmieniamy Enum na tekst, żeby pasował do schematu bazy: permission TEXT, valid TEXT
-    let permission_str = new_user.permission.to_string(); // Możesz też użyć new_user.permit.to_string(), jeśli zaimplementowałeś Display
-    let valid_str = "false";      // Zgodnie z typem TEXT w kolumnie `valid`
+    let permission_str = new_user.permission.to_string();
+    let valid_str = "false";
 
-    // 4. Wstawienie do bazy danych
-    // Używamy db_usr ze stanu aplikacji
+
     let insert_result = sqlx::query(
         "
         INSERT INTO users (username, password_hash, email, permission, valid)
         VALUES (?, ?, ?, ?, ?)
         "
     )
-        .bind(&new_user.username)          // Podpinamy zmienne ręcznie za pomocą .bind()
+        .bind(&new_user.username)
         .bind(&new_user.password_hash)
         .bind(&email)
         .bind(permission_str)
@@ -73,7 +71,7 @@ pub async fn handler_user_new(
         .execute(&state.db)
         .await;
 
-    // 5. Obsługa wyniku z bazy
+    // obsługa wyniku z bazy
     match insert_result {
         Ok(_) => {
             (StatusCode::CREATED, Json(serde_json::json!({ "message": "Konto utworzone pomyślnie!" }))).into_response()

@@ -11,7 +11,7 @@ use jsonwebtoken::{encode, EncodingKey, Header};
 use sqlite_serv::auth::claims::Claims;
 use sqlite_serv::auth::jwt::JWT_SECRET;
 use sqlite_serv::product::get::get_products_list;
-use sqlite_serv::sql::AppState;
+use sqlite_serv::AppState;
 use sqlite_serv::user::get::get_user_by_username;
 
 pub async fn ws_handler(
@@ -22,12 +22,13 @@ pub async fn ws_handler(
     ws.on_upgrade(|socket| handle_socket(socket, state))
 }
 
+
+/// Autorisation handle
 pub async fn login_handler(
-    State(state): State<AppState>, // <-- Dodajemy dostęp do stanu bazy danych
+    State(state): State<AppState>,
     Json(payload): Json<requests::login::LoginRequest>
 ) -> impl IntoResponse {
 
-    // Szukamy użytkownika bezpośrednio w bazie za pomocą nowej funkcji
     let found_user = match get_user_by_username(&state.db, &payload.username).await {
         Ok(Some(user)) => user,
         Ok(None) => {
@@ -41,7 +42,6 @@ pub async fn login_handler(
 
     println!("login_handler found username {:?}", found_user);
 
-    // Weryfikacja hasła (wykorzystuje dokładnie tę samą metodę struktury User, co wcześniej)
     if found_user.verify_password(&payload.password) {
         // Token będzie ważny przez 24 godziny
         let expiration = Utc::now()
@@ -72,20 +72,12 @@ pub async fn login_handler(
     }
 }
 
+/// WebSocket handler
 pub async fn handle_socket(socket: WebSocket, state: AppState) {
     let (mut sender, mut receiver) = socket.split();
 
     println!("Nowy klient połączył się przez WebSocket");
-
-    // let auth_msg = serde_json::json!({
-    //     "type": "auth",
-    //     "username": claims.username,
-    //     "role": claims.role
-    // });
-    //
-    // // Wysyłamy powitanie przed pętlą z produktami
-    // let _ = sender.send(Message::Text(auth_msg.to_string().into())).await;
-    // Zadanie odbierające loguje wiadomości od klienta
+    
     let mut recv_task = tokio::spawn(async move {
         while let Some(Ok(msg)) = receiver.next().await {
             if let Message::Text(text) = msg {
@@ -95,12 +87,10 @@ pub async fn handle_socket(socket: WebSocket, state: AppState) {
         println!("Klient rozłączył się (nasłuchiwanie przerwane).");
     });
 
-    // Zadanie wysyłające do klienta
     let mut send_task = tokio::spawn(async move {
         let mut rx = state.ws_broadcast_tx.subscribe();
 
-        // 1. DANE STARTOWE (Wysyłamy tylko RAZ)
-        // Używamy Twojej istniejącej funkcji get_products_list
+        // DANE STARTOWE (Wysyłamy tylko RAZ), zakładka admin
         if let Ok(produkty) = get_products_list(&state.db).await {
             let json = serde_json::to_string(&produkty).unwrap_or_else(|_| "[]".to_string());
 
@@ -127,14 +117,3 @@ pub async fn handle_socket(socket: WebSocket, state: AppState) {
 
     println!("Czyszczenie zasobów dla rozłączonego klienta zakończone.");
 }
-
-// async fn pobierz_produkty_jako_json(pool: &sqlx::SqlitePool) -> Result<String, sqlx::Error> {
-//     let produkty: Vec<Product> = sqlx::query_as::<_, Product>(
-//         "SELECT id, name, ... FROM products"
-//     )
-//         .fetch_all(pool)
-//         .await?;
-// 
-//     let json = serde_json::to_string(&produkty).unwrap_or_else(|_| "[]".to_string());
-//     Ok(json)
-// }

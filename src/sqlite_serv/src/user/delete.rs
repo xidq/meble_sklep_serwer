@@ -2,14 +2,14 @@ use axum::extract::State;
 use http::StatusCode;
 use sqlx::SqlitePool;
 use crate::auth::claims::Claims;
-use crate::sql::AppState;
+use crate::AppState;
 
 pub async fn handler_delete_user_by_user(
     State(state): State<AppState>,
     // axum::extract::Path(id): axum::extract::Path<i64>,
     claims: Claims,
 ) -> Result<StatusCode, (StatusCode, String)> {
-    // Zamiast zmiennej z Path, podajesz ID bezpośrednio wyciągnięte z tokenu JWT!
+    // id bezpośrednio wyciągnięte z JWT
     let my_id = claims.sub;
 
     println!("Użytkownik o ID {} zażądał usunięcia swojego konta", my_id);
@@ -17,7 +17,6 @@ pub async fn handler_delete_user_by_user(
     let rows_affected = delete_user_by_id(&state.db, my_id)
         .await
         .map_err(|e| {
-            // Twój niezmieniony kod mapowania błędów...
             (StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
         })?;
 
