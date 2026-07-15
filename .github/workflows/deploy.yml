@@ -49,20 +49,29 @@ jobs:
           sudo ldconfig
           rm -rf /tmp/libheif
 
-      # 🔥 KROK 2: Przygotowujemy strukturę katalogów pod bazę danych i pliki dla testów
-      - name: Create DB and Files directories
+      # 🔥 KROK 2: Przygotowujemy strukturę katalogów i plik bazy danych pod testy
+      - name: Create DB, Migrations and Files directories
         run: |
-          mkdir -p data
+          # Tworzymy katalog na pliki
           mkdir -p src/api
+          
+          # Tworzymy katalog na bazę danych i inicjalizujemy pusty plik bazy
+          mkdir -p data
+          touch data/data.db
+          
+          # Tworzymy katalog na migracje (wymagany przez makro sqlx::migrate!)
+          mkdir -p migrations/data
 
+      # 🔥 KROK 3: Uruchomienie testów z całkowicie zhardkodowanymi sekretami testowymi
       - name: Run tests
         env:
-          JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          FRONTEND_SERVER: ${{ secrets.FRONTEND_SERVER }}
-          PEPPER_KEY: ${{ secrets.PEPPER_KEY }}
-          USERS_DB_ENCRYPTION_KEY: ${{ secrets.USERS_DB_ENCRYPTION_KEY }}
-          FILES_URL: src/api/ # upewniamy się, że testy widzą tę zmienną ścieżki
+          # Wszystkie sekrety zostały zhardkodowane bezpiecznymi wartościami testowymi
+          DATABASE_URL: sqlite:data/data.db
+          FILES_URL: src/api/
+          JWT_SECRET_KEY: "super_tajny_klucz_testowy_dla_jwt_o_odpowiedniej_dlugosci_32_bajtow_minimum"
+          FRONTEND_SERVER: "http://localhost:3000"
+          PEPPER_KEY: "testowy_pepper_do_haszowania"
+          USERS_DB_ENCRYPTION_KEY: "testowy_klucz_szyfrowania_bazy_sqlcipher_12345"
         run: cargo test
 
   # --- ETAP 2: AUTOMATYCZNY MERGE (Tylko po udanych testach na dev) ---
