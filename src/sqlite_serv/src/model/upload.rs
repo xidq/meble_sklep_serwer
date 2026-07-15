@@ -7,10 +7,11 @@ use http::StatusCode;
 use serde_json::json;
 use sqlx::SqlitePool;
 use std::collections::BTreeMap;
-use std::io::Read;
+// use std::io::Read;
 use std::path::PathBuf;
 use tokio::io::AsyncWriteExt;
 use crate::auth::sending_data::{files_send_to_server, json_send_to_server, RodzajeDanychJson};
+use crate::foto::get_items_prefix;
 use crate::model::get::get_models_data_by_id;
 
 pub async fn handler_model_upload_to_server(
@@ -31,7 +32,7 @@ pub async fn handler_model_upload_to_server(
             )
         })?;
 
-    let base_path = format!("src/api/products/{}/model", item_name_id);
+    let base_path = format!("{}/products/{}/model", get_items_prefix(), item_name_id);
 
     // 2. Upewniamy się, że folder istnieje (asynchronicznie)
     tokio::fs::create_dir_all(&base_path)
@@ -52,12 +53,12 @@ pub async fn handler_model_upload_to_server(
         let file_name = field.file_name().unwrap_or("unknown").to_string();
         let path = std::path::Path::new(&base_path).join(&file_name);
 
-        if let Ok(data) = field.bytes().await {
-            if let Ok(mut file) = tokio::fs::File::create(&path).await {
-                if file.write_all(&data).await.is_ok() {
+        if let Ok(data) = field.bytes().await
+            && let Ok(mut file) = tokio::fs::File::create(&path).await
+                && file.write_all(&data).await.is_ok() {
                     vec_sciezki_plikow.push(path);
-                }
-            }
+
+
         }
     }
 
@@ -126,7 +127,7 @@ pub async fn model_upsert_in_database(pool: &SqlitePool, product: &Model) -> Res
 
     // Zamieniamy BTreeMap na JSON (tak samo jak wcześniej)
     let model_json = serde_json::to_string(&product.model)
-        .map_err(|e| sqlx::Error::Protocol(format!("Błąd serializacji JSON: {}", e).into()))?;
+        .map_err(|e| sqlx::Error::Protocol(format!("Błąd serializacji JSON: {}", e)))?;
 
     // Magia dzieje się w zapytaniu SQL:
     sqlx::query(

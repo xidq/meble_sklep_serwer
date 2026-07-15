@@ -1,7 +1,6 @@
 use reqwest::multipart::{Form, Part};
-use std::path::PathBuf;
 use serde::Serialize;
-use strum::Display;
+use std::path::PathBuf;
 
 #[derive(Debug, Serialize)]
 pub enum RodzajeDanychJson{
@@ -22,12 +21,16 @@ pub async fn files_send_to_server(
     modyfikator: &str, // np. name_id
 ) -> Result<(), String> {
 
-    let client = reqwest::Client::new();
+    // let client = reqwest::Client::new();
+    let client = reqwest::Client::builder()
+        .tls_danger_accept_invalid_certs(true)
+        .build()
+        .map_err(|e| format!("Błąd budowania klienta: {}", e))?;
     let frontend_server = std::env::var("FRONTEND_SERVER")
         .unwrap_or_else(|_| "http://localhost:8081/".to_string());
 
     let serwer_adres = format!("{}api/produkty/{}", frontend_server, modyfikator);
-    println!("będę wysyłał na adres: {}", &serwer_adres);
+    println!("będę wysyłał na adres: {}", serwer_adres);
     // 1. Inicjujemy pusty formularz multipart
     let mut form = Form::new();
 
@@ -85,13 +88,17 @@ pub async fn json_send_to_server(
     json_data: serde_json::Value,
     typ: RodzajeDanychJson, // "models" lub "img_front"
 ) -> Result<(), String> {
-    let client = reqwest::Client::new();
+    // let client = reqwest::Client::new();
+    let client = reqwest::Client::builder()
+        .tls_danger_accept_invalid_certs(true)
+        .build()
+        .map_err(|e| format!("Błąd budowania klienta: {}", e))?;
     let frontend_server = std::env::var("FRONTEND_SERVER")
         .unwrap_or_else(|_| "http://localhost:8081/".to_string());
 
     // Używamy endpointu, który w Node.js obsługuje JSON-a i wywołuje rebuildRouterJson()
     let serwer_adres = format!("{}api/upload/json/{}/{}", frontend_server, typ.str(), modyfikator);
-    println!("będę wysyłał na adres: {}", &serwer_adres);
+    println!("będę wysyłał na adres: {}", serwer_adres);
 
     let response = client
         .post(&serwer_adres)

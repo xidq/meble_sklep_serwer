@@ -1,20 +1,19 @@
+use crate::auth::claims::Claims;
+use crate::auth::permissions::{check_is_admin, check_is_own_acc};
 use crate::sql::AppState;
-use crate::user::{match_role, pepper_password, User, UserRola};
-use crate::PEPPER_KEY;
+use crate::user::{match_role, pepper_password, User};
 use axum::extract::State;
 use axum::Json;
 use bcrypt::hash;
 use http::StatusCode;
 use sqlx::SqlitePool;
-use crate::auth::claims::Claims;
-use crate::auth::permissions::{check_is_admin, check_is_own_acc};
 
 pub async fn handle_edit_user(
     State(state): State<AppState>,
     claims: Claims,
     Json(payload): Json<User>,
 ) -> Result<StatusCode, (StatusCode, String)> {
-    println!("Odebrano żądanie zmiany produktu id: {}", &payload.id);
+    println!("Odebrano żądanie zmiany produktu id: {}", payload.id);
     check_is_admin(&claims)?;
     edit_user(
         &state.db,
@@ -33,7 +32,7 @@ pub async fn handle_edit_user_by_user(
     claims: Claims,
     Json(mut payload): Json<User>,
 ) -> Result<StatusCode, (StatusCode, String)> {
-    println!("Odebrano żądanie zmiany produktu id: {}", &payload.id);
+    println!("Odebrano żądanie zmiany produktu id: {}", payload.id);
 
     check_is_own_acc(&claims, &payload)?;
     // if claims.sub != payload.id {
@@ -57,7 +56,7 @@ pub async fn handle_edit_user_by_user(
     Ok(StatusCode::NO_CONTENT)
 }
 pub async fn edit_user(pool: &SqlitePool, user: &User) -> Result<(), sqlx::Error> {
-    let pepper = PEPPER_KEY.get().expect("PEPPER_KEY nie jest zainicjalizowany");
+    // let pepper = PEPPER_KEY.get().expect("PEPPER_KEY nie jest zainicjalizowany");
     if user.password_hash.len() < 8 || user.password_hash.len() > 100 {
         return Err(sqlx::Error::Protocol(
             "Hasło musi mieć od 8 do 100 znaków".to_string()

@@ -1,18 +1,19 @@
-use axum::extract::State;
-use axum::Json;
-use axum::response::IntoResponse;
-use http::StatusCode;
 use crate::sql::AppState;
-use crate::user::{RegisterRequest, User, UserRola};
+use crate::user::{RegisterRequest, User};
+use axum::extract::State;
+use axum::response::IntoResponse;
+use axum::Json;
+use http::StatusCode;
 use regex::Regex;
 
 pub async fn handler_user_new(
-    State(state): State<AppState>, // <-- Dodajemy dostęp do stanu aplikacji (i puli db_usr)
+    State(state): State<AppState>,
     Json(payload): Json<RegisterRequest>,
 ) -> impl IntoResponse {
     let username = payload.username.trim();
     let password = payload.password;
     let email = payload.email;
+    let email_ref = email.as_ref();
     let name = payload.name;
 
     // 1. Walidacja loginu (Regex)
@@ -24,6 +25,15 @@ pub async fn handler_user_new(
                 "error": "Login musi mieć od 3 do 20 znaków i zawierać tylko litery, cyfry oraz znak '_'"
             }))
         ).into_response();
+    }
+
+    if password != payload.confirm_password {
+        return (StatusCode::BAD_REQUEST, Json(serde_json::json!({"error": "Hasła nie są identyczne"}))).into_response();
+    }
+
+    // 2. Walidacja formatu emaila
+    if !email_ref.is_some_and(|cc| cc.contains("@")) || email_ref.is_some_and(|xx| xx.len() < 5) {
+        return (StatusCode::BAD_REQUEST, Json(serde_json::json!({"error": "Niepoprawny format emaila"}))).into_response();
     }
 
     // 2. Walidacja hasła
@@ -38,7 +48,7 @@ pub async fn handler_user_new(
 
     // 3. Hashowanie hasła
     // Baza sama nadaje ID, więc do Twojej funkcji User::new przekazujemy dummy id (np. 0)
-    let new_user = match User::new(username, name, email, password) {
+    let new_user = match User::new(username, name, email.clone(), password) {
         Ok(user) => user,
         Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, Json(serde_json::json!({ "error": "Błąd hashowania" }))).into_response(),
     };
@@ -51,12 +61,13 @@ pub async fn handler_user_new(
     // Używamy db_usr ze stanu aplikacji
     let insert_result = sqlx::query(
         "
-        INSERT INTO users (username, password_hash, permission, valid)
-        VALUES (?, ?, ?, ?)
+        INSERT INTO users (username, password_hash, email, permission, valid)
+        VALUES (?, ?, ?, ?, ?)
         "
     )
         .bind(&new_user.username)          // Podpinamy zmienne ręcznie za pomocą .bind()
         .bind(&new_user.password_hash)
+        .bind(&email)
         .bind(permission_str)
         .bind(valid_str)
         .execute(&state.db)

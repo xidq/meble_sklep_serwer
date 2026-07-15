@@ -14,10 +14,10 @@ pub async fn handler_delete_product_by_id(
         .await
         .map_err(|e| {
             // Sprawdzamy, czy to blokada przez klucz obcy (ON DELETE RESTRICT dla zamówień)
-            if let sqlx::Error::Database(db_err) = &e {
-                if db_err.is_foreign_key_violation() {
+            if let sqlx::Error::Database(db_err) = &e &&
+                 db_err.is_foreign_key_violation() {
                     return (StatusCode::CONFLICT, "Nie można usunąć produktu, ponieważ znajduje się w zamówieniach.".to_string());
-                }
+
             }
             eprintln!("Błąd bazy danych przy usuwaniu: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, e.to_string())

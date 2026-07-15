@@ -1,12 +1,11 @@
+use crate::auth::claims::Claims;
+use crate::auth::permissions::check_is_admin;
+use crate::sql::AppState;
+use crate::user::User;
 use axum::extract::State;
 use axum::Json;
 use http::StatusCode;
 use sqlx::SqlitePool;
-use crate::auth::claims::Claims;
-use crate::auth::permissions::check_is_admin;
-use crate::product::Product;
-use crate::sql::AppState;
-use crate::user::User;
 
 pub async fn handler_user_get_list(
     State(state): State<AppState>,

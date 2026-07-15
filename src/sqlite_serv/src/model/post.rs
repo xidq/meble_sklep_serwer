@@ -5,7 +5,7 @@ pub async fn post_model_update_in_database(pool: &SqlitePool, updated_product: &
 
     // Zamieniamy BTreeMap z powrotem na czysty tekst (JSON)
     let model_json = serde_json::to_string(&updated_product.model)
-        .map_err(|e| sqlx::Error::Protocol(format!("Błąd serializacji JSON przy update: {}", e).into()))?;
+        .map_err(|e| sqlx::Error::Protocol(format!("Błąd serializacji JSON przy update: {}", e)))?;
 
     // Wykonujemy UPDATE, szukając po product_id
     sqlx::query(

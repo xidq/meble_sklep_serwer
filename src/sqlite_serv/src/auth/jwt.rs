@@ -1,14 +1,8 @@
 use crate::auth::claims::Claims;
 use axum::http::{HeaderMap, StatusCode};
 use jsonwebtoken::{decode, DecodingKey, Validation};
-use std::fs::File;
-use std::io::BufReader;
-use std::path::Path;
+// use sqlx::Row;
 use std::sync::OnceLock;
-use rand::RngExt;
-use sqlx::{Row};
-use sqlx::sqlite::SqlitePool;
-use crate::user::{User, UserRola};
 
 pub static JWT_SECRET: OnceLock<Vec<u8>> = OnceLock::new();
 
@@ -95,17 +89,17 @@ pub fn initialize_jwt_secret() {
         let mut dynamic_key = [0u8; 32];
         rand::rng().fill(&mut dynamic_key);
 
-        JWT_SECRET.set(dynamic_key.to_vec()).expect("Błąd inicjalizacji klucza (debug)");
-        println!("🔑 RELEASE: Wygenerowano losowy klucz JWT.");
+        JWT_SECRET.set(dynamic_key.to_vec()).expect("Błąd inicjalizacji klucza (release)");
+        println!("RELEASE: Wygenerowano losowy klucz JWT.");
     }
 
     // ładowany z konfiguracji
     #[cfg(debug_assertions)]
     {
         let secret = std::env::var("JWT_SECRET_KEY")
-            .expect("W trybie release zmienna JWT_SECRET_KEY jest wymagana!");
+            .expect("W trybie debug zmienna JWT_SECRET_KEY jest wymagana!");
 
-        JWT_SECRET.set(secret.into_bytes()).expect("Błąd inicjalizacji klucza (release)");
-        println!("🔑 DEBUG: Załadowano klucz JWT z konfiguracji.");
+        JWT_SECRET.set(secret.into_bytes()).expect("Błąd inicjalizacji klucza (debug)");
+        println!("DEBUG: Załadowano klucz JWT z konfiguracji.");
     }
 }

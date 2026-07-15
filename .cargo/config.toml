@@ -1,0 +1,5 @@
+# .cargo/config.toml
+[target.'cfg(all())']
+rustflags = [
+    "--check-cfg=cfg(docker)"
+]

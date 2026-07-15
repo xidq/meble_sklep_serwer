@@ -15,6 +15,7 @@ use crate::PEPPER_KEY;
 pub struct RegisterRequest {
     pub username: String,
     pub password: String,
+    pub confirm_password: String,
     #[serde(default, deserialize_with = "empty_string_as_none")]
     pub email: Option<String>,
     #[serde(default, deserialize_with = "empty_string_as_none")]
@@ -25,9 +26,9 @@ where
     D: Deserializer<'de>,
 {
     let opt: Option<String> = Option::deserialize(deserializer)?;
-    Ok(opt.and_then(|s| if s.trim().is_empty() { None } else { Some(s) }))
+    Ok(opt.filter(|s| !s.trim().is_empty()))
 }
-#[derive(Serialize, Deserialize, FromRow, Debug, Clone)]
+#[derive(Clone, Serialize, Deserialize, FromRow, Debug)]
 pub struct User{
     pub id: i64,
     pub username: String,
@@ -78,7 +79,6 @@ pub fn get_pepper_key() -> &'static [u8] {
     // std::env::var("PEPPER_KEY").expect("Brak PEPPER_KEY w .env")
 }
 impl User {
-    // Usunięto `&self` z argumentów. Dodano `impl Into<String>` dla wygody.
     pub fn new(
         username: impl Into<String>,
         name: Option<String>,
