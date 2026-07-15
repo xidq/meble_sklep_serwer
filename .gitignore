@@ -1,0 +1,10 @@
+/target
+/.env
+/src/api/
+/src/api/login/
+/my_database.db
+/src/test_data/
+*.sh
+/*.sh
+/data/
+/.idea/

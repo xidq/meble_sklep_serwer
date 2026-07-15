@@ -1,0 +1,26 @@
+[package]
+name = "sqlite_serv"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+sqlx = { workspace = true }
+serde = { workspace = true }
+axum = { workspace = true }
+http = { workspace = true }
+serde_json = { workspace = true }
+avif_image_handler = { path = "../avif_image_handler" }
+id_handling = { path = "../id_handling" }
+tokio = { workspace = true }
+axum-macros =  { workspace = true }
+anyhow = { workspace = true }
+reqwest = { workspace = true}
+chrono = { workspace = true }
+strum = { workspace = true }
+hmac = { workspace = true }
+sha2 = { workspace = true }
+hex = { workspace = true }
+bcrypt = { workspace = true }
+regex = { workspace = true }
+jsonwebtoken = { workspace = true }
+rand = { workspace = true }
