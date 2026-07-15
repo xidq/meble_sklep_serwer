@@ -76,7 +76,7 @@ jobs:
           
           # Uruchamiamy migracje na naszej świeżo stworzonej bazie testowej
           sqlx migrate run --source migrations/data --database-url sqlite:data/data.db
-
+#
 #      # 🔥 KROK 3: Uruchomienie testów z całkowicie zhardkodowanymi sekretami testowymi
 #      - name: Run tests
 #        env:
