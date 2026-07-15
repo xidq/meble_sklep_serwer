@@ -90,7 +90,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write       # Wymagane do scalenia kodu
-      pull-requests: write  # Wymagane do utworzenia i zatwierdzenia PR
+      pull-requests: write  # Wymagane do utworzenia i zatwierdzenia PR  fh
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
