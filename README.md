@@ -88,15 +88,15 @@ Custom profiles in `Cargo.toml` control optimization levels:
 ### Development Server
 
 ```bash
-cargo run -p server
+cargo run
 ```
 
 ### Production Build
-# without docker
+#### without docker
 ```bash
 cargo build -r
 ```
-# for docker
+#### for docker
 ```bash
 cargo build --profile docker
 ```
