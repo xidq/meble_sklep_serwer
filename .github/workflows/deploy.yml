@@ -21,6 +21,34 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
+      # 🔥 KROK 1: Instalujemy podstawowe biblioteki systemowe (BEZ starego libavif-dev)
+      # Dodatkowo instalujemy cmake i ninja do szybkiej kompilacji najnowszego libavif ze źródeł
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pkg-config libsqlite3-dev libssl-dev libheif-dev cmake ninja-build
+
+      # 🔥 KROK 1.5: Pobieramy, budujemy i instalujemy najnowsze libavif bezpośrednio z GitHuba
+      - name: Build and install latest libavif from source
+        run: |
+          git clone https://github.com/AOMediaCodec/libavif.git
+          cd libavif
+          # Konfigurujemy build przy użyciu CMake i Ninja
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DAVIF_CODEC_AOM=OFF \
+            -DAVIF_BUILD_APPS=OFF
+          # Kompilujemy i instalujemy w ścieżkach systemowych (/usr/local)
+          sudo cmake --build build --target install
+          # Odświeżamy cache linker'a, aby system oraz Rust widzieli nową bibliotekę
+          sudo ldconfig
+
+      # 🔥 KROK 2: Przygotowujemy strukturę katalogów pod bazę danych i pliki dla testów
+      - name: Create DB and Files directories
+        run: |
+          mkdir -p data
+          mkdir -p src/api
+
       - name: Run tests
         env:
           JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
@@ -28,9 +56,35 @@ jobs:
           FRONTEND_SERVER: ${{ secrets.FRONTEND_SERVER }}
           PEPPER_KEY: ${{ secrets.PEPPER_KEY }}
           USERS_DB_ENCRYPTION_KEY: ${{ secrets.USERS_DB_ENCRYPTION_KEY }}
+          FILES_URL: src/api/ # upewniamy się, że testy widzą tę zmienną ścieżki
         run: cargo test
 
-  # --- ETAP 2: BUDOWANIE ---
+  # --- ETAP 2: AUTOMATYCZNY MERGE (Tylko po udanych testach na dev) ---
+  merge-to-main:
+    needs: test
+    if: github.ref == 'refs/heads/dev'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Daje uprawnienia do pushowania zmian z merge do repozytorium
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Pobieramy pełną historię gita do prawidłowego merge'owania
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Merge dev into main and push
+        run: |
+          git checkout main
+          git merge origin/dev --no-ff -m "chore: auto-merge dev to main [skip ci]"
+          git push origin main
+
+  # --- ETAP 3: BUDOWANIE (Tylko po pushu lub merge na main) ---
   build-and-push:
     needs: test
     if: github.ref == 'refs/heads/main'
