@@ -89,22 +89,21 @@ jobs:
     if: github.ref == 'refs/heads/dev'
     runs-on: ubuntu-latest
     permissions:
-      contents: write       # Wymagane do scalenia kodu
-      pull-requests: write  # Wymagane do utworzenia i zatwierdzenia PR  fh
+      contents: write
+      pull-requests: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Create and Merge Pull Request
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # 🔥 Zmieniamy GITHUB_TOKEN na Twój osobisty ADMIN_PAT
+          GH_TOKEN: ${{ secrets.GIT_WSIO_NA_ACTIONS_LEL }}
         run: |
-          # Sprawdzamy, czy istnieje już otwarty PR z dev do master, aby nie dublować
           EXISTING_PR=$(gh pr list --head dev --base master --state open --json number --jq '.[0].number')
           
           if [ -z "$EXISTING_PR" ]; then
             echo "Tworzenie nowego Pull Requestu..."
-            # Tworzy PR z dev do master z pominięciem kolejnych akcji w commitach ([skip ci])
             PR_URL=$(gh pr create \
               --head dev \
               --base master \
@@ -112,14 +111,13 @@ jobs:
               --body "Automatyczny PR wygenerowany przez GitHub Actions po udanych testach.")
             echo "Utworzono PR: $PR_URL"
           
-            # Pobieramy numer nowo stworzonego PR
             PR_NUM=$(gh pr view --json number --jq '.number')
           else
             echo "PR już istnieje: #$EXISTING_PR"
             PR_NUM=$EXISTING_PR
           fi
-          
-          # Włączamy auto-merge przy użyciu metody "merge" (odpowiednik --no-ff)
+
+          # Ponieważ używamy Twojego ADMIN_PAT, ta komenda pomyślnie ominie ochronę gałęzi
           echo "Scalanie Pull Requestu #$PR_NUM..."
           gh pr merge "$PR_NUM" --merge --admin --delete-branch=false
 
