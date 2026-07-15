@@ -19,3 +19,4 @@ pub mod auth;
 
 // pub mod sql_image_handling;
 pub static PEPPER_KEY: OnceLock<String> = OnceLock::new();
+pub static FILES_LOCATION: OnceLock<String> = OnceLock::new();

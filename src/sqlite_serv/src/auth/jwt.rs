@@ -1,14 +1,8 @@
 use crate::auth::claims::Claims;
 use axum::http::{HeaderMap, StatusCode};
 use jsonwebtoken::{decode, DecodingKey, Validation};
-use std::fs::File;
-use std::io::BufReader;
-use std::path::Path;
+// use sqlx::Row;
 use std::sync::OnceLock;
-use rand::RngExt;
-use sqlx::{Row};
-use sqlx::sqlite::SqlitePool;
-use crate::user::{User, UserRola};
 
 pub static JWT_SECRET: OnceLock<Vec<u8>> = OnceLock::new();
 

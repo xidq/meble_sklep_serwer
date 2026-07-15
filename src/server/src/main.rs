@@ -2,47 +2,105 @@ pub mod requests;
 pub mod response;
 pub mod register;
 pub mod websoc;
+mod tests;
+mod router;
 
-use axum::extract::DefaultBodyLimit;
-use axum::http::header::{AUTHORIZATION, CONTENT_TYPE};
-use axum::http::Method;
-use axum::routing::put;
-use axum::{
-    routing::{get, post}
-    , Router,
-};
+use crate::router::routing::build_router;
 use sqlite_serv::sql::AppState;
-use sqlite_serv::PEPPER_KEY;
+use sqlite_serv::{FILES_LOCATION, PEPPER_KEY};
 use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions};
 use std::net::SocketAddr;
 use std::str::FromStr;
-use std::sync::Arc;
 use tokio::net::TcpListener;
 use tokio::sync::broadcast;
-use tower_governor::{governor::GovernorConfigBuilder, GovernorLayer};
-use tower_http::cors::{Any, CorsLayer};
-use websoc::websocet;
-
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>>{
     dotenvy::dotenv().ok();
+
+    // =========================================================================
+    // 🔥 SZYBKA DIAGNOSTYKA ŚRODOWISKA I ŚCIEŻEK W DOCKERZE
+    // =========================================================================
+    println!("\n=== [DIAGNOSTYKA STARTU APLIKACJI] ===");
+
+    // 1. Sprawdzenie katalogu roboczego (CWD)
+    match std::env::current_dir() {
+        Ok(cwd) => println!("📍 Bieżący katalog roboczy (CWD): {:?}", cwd),
+        Err(e) => println!("⚠️ Błąd odczytu CWD: {:?}", e),
+    }
+
+    // 2. Odczyt zmiennych środowiskowych
+    let db_url = std::env::var("DATABASE_URL").unwrap_or_else(|_| "BRAK ZMIENNEJ".to_string());
+    let files_url = std::env::var("FILES_URL").unwrap_or_else(|_| "BRAK ZMIENNEJ".to_string());
+    println!("💾 DATABASE_URL wczytany jako: \"{}\"", db_url);
+    println!("📁 FILES_URL wczytany jako: \"{}\"", files_url);
+
+    // 3. Analiza ścieżki SQLite i test zapisu w folderze
+    if db_url.starts_with("sqlite://") || db_url.starts_with("sqlite:") {
+        let path_str = db_url
+            .trim_start_matches("sqlite://")
+            .trim_start_matches("sqlite:");
+
+        if path_str != ":memory:" {
+            let db_path = std::path::Path::new(path_str);
+
+            // Wyznaczenie pełnej, absolutnej ścieżki
+            let absolute_db_path = if db_path.is_absolute() {
+                db_path.to_path_buf()
+            } else if let Ok(cwd) = std::env::current_dir() {
+                cwd.join(db_path)
+            } else {
+                db_path.to_path_buf()
+            };
+
+            println!("🔍 Pełna bezwzględna ścieżka do bazy: {:?}", absolute_db_path);
+
+            if let Some(parent_dir) = absolute_db_path.parent() {
+                println!("📂 Folder nadrzędny bazy danych: {:?}", parent_dir);
+                let exists = parent_dir.exists();
+                println!("❓ Czy ten folder istnieje? {}", if exists { "TAK" } else { "NIE (SQLite się wyłoży!)" });
+
+                if exists {
+                    // Próbujemy zapisać losowy plik, żeby sprawdzić uprawnienia systemu plików
+                    let test_file_path = parent_dir.join(".write_test_docker");
+                    match std::fs::write(&test_file_path, "test") {
+                        Ok(_) => {
+                            println!("✅ Uprawnienia zapisu w folderze: OK (zapis pomyślny)");
+                            let _ = std::fs::remove_file(test_file_path);
+                        }
+                        Err(err) => {
+                            println!("❌ BRAK UPRAWNIEŃ DO ZAPISU w folderze! Błąd: {:?}", err);
+                        }
+                    }
+                }
+            }
+        }
+    } else {
+        println!("⚠️ DATABASE_URL nie wygląda na SQLite.");
+    }
+    println!("=================================================\n");
+    // =========================================================================
+
+
     sqlite_serv::auth::jwt::initialize_jwt_secret();
     let pepper_key = std::env::var("PEPPER_KEY").expect("Brak PEPPER_KEY w .env");
     PEPPER_KEY.set(pepper_key).expect("Nie udało się zainicjalizować PEPPER_KEY");
 
+    let files_location = std::env::var("FILES_URL").expect("Brak FILES_URL w .env");
+    FILES_LOCATION.set(files_location).expect("Nie udało się zainicjalizować FILES_URL");
+
     let db_url = std::env::var("DATABASE_URL").expect("DATABASE_URL musi być ustawiona");
 
-    #[cfg(docker)]
-    if db_url.starts_with("sqlite://") {
-        let path_str = db_url.trim_start_matches("sqlite://");
-        if let Some(parent_dir) = Path::new(path_str).parent() {
-            if !parent_dir.exists() && parent_dir.as_os_str() != "" {
-                fs::create_dir_all(parent_dir)?;
-                println!("Utworzono katalog dla bazy danych: {:?}", parent_dir);
-            }
-        }
-    }
+    // #[cfg(docker)]
+    // if db_url.starts_with("sqlite://") {
+    //     let path_str = db_url.trim_start_matches("sqlite://");
+    //     if let Some(parent_dir) = Path::new(path_str).parent() {
+    //         if !parent_dir.exists() && parent_dir.as_os_str() != "" {
+    //             fs::create_dir_all(parent_dir)?;
+    //             println!("Utworzono katalog dla bazy danych: {:?}", parent_dir);
+    //         }
+    //     }
+    // }
 
     // 4. BEZPIECZNA KONFIGURACJA SQLITE DLA DOCKERA
     // Zamiast prostego .connect(), konfigurujemy bazę do stabilnej pracy w kontenerze
@@ -106,95 +164,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
 
     let state = AppState { /* tx ,*/ db: pool , ws_broadcast_tx};
 
-    let governor_conf = Arc::new(
-        GovernorConfigBuilder::default()
-            .per_second(2)
-            .burst_size(5)
-            .finish()
-            .unwrap()
-    );
-    let governor_layer = GovernorLayer::new(governor_conf);
 
-    let cors = CorsLayer::new()
-        .allow_origin(Any)
-        // .allow_methods(Any)
-        // .allow_headers(Any);
-        .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE])
-        .allow_headers([AUTHORIZATION, CONTENT_TYPE]); // TO JEST KLUCZOWE
-
-    // router
-    let app = Router::new()
-        .route(
-            "/usr/login",
-            post(websocet::login_handler)
-        )
-        .route(
-            "/usr/usr",
-            post(sqlite_serv::user::post::handler_user_new)
-                .get(sqlite_serv::user::get::handler_get_user_own_data)
-                .delete(sqlite_serv::user::delete::handler_delete_user_by_user)
-                .put(sqlite_serv::user::put::handle_edit_user_by_user)
-        )
-        .route(
-            "/api/user/orders",
-            get(sqlite_serv::zamowienia::get::handler_get_user_orders)
-        )
-        .route(
-            "/admin/usr",
-            post(sqlite_serv::user::post::handler_user_new)
-                .put(sqlite_serv::user::put::handle_edit_user)
-                .get(sqlite_serv::user::get::handler_user_get_list)
-        )
-        .route(
-            "/admin/usr/{id}",
-            get(sqlite_serv::user::get::handler_get_user_data_by_id) //get user data
-                .delete(sqlite_serv::user::delete::handler_delete_user_by_id)
-                // .put(sqlite_serv::user::put::handle_edit_user) //nie trza id, jest caly user
-                // .delete(sqlite_serv::user::delete::handler_delete_user_by_id)
-        )
-        .route(
-            "/api/products",
-            get(sqlite_serv::product::get::handler_get_products_list)
-                .post(sqlite_serv::product::post::handler_put_product_new) //nowy
-        )
-        .route(
-            "/api/products/name_id/{name_id}",
-            get(sqlite_serv::product::get::handler_get_products_data_by_nameid)
-        )
-        .route(
-            "/api/products/{id}",
-            put(sqlite_serv::product::put::handle_edit_product) //update
-                .get(sqlite_serv::product::get::handler_get_products_data_by_id)
-                .delete(sqlite_serv::product::delete::handler_delete_product_by_id)
-        )
-        .route(
-            "/api/models",
-            get(sqlite_serv::model::get::handler_get_models_list)
-        )
-        .route(
-            "/api/models/{id}",
-            get(sqlite_serv::model::get::handler_get_models_data_by_id)
-        )
-        .route(
-            "/api/models/upload",
-            get(sqlite_serv::model::upload::handler_model_upload_to_server)
-        )
-        .route(
-            "/ws",
-            get(websocet::ws_handler)
-        )
-        .route(
-            "/api/order",
-            post(sqlite_serv::zamowienia::post::handle_put_order_new)
-        )
-        .route(
-            "/api/images/upload/{item_name_id}",
-            post(sqlite_serv::foto::upload::handler_image_upload_to_server))
-        .layer(DefaultBodyLimit::max(10 * 1024 * 1024))
-        // rate-limiter
-        .layer(governor_layer)
-        .layer(cors)
-        .with_state(state);
+    let app = build_router(state);
 
     // #[cfg(docker)]
     // let port = std::env::var("PORT").unwrap_or_else(|_| "8080".to_string());

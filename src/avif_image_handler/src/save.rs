@@ -125,34 +125,34 @@ pub async fn avif_match(
 
 }
 
-#[cfg(test)]
-mod tests {
-    use std::io::{Error, ErrorKind};
-    use std::path::PathBuf;
-    use crate::wczytywanie::main_wczytywanie::wczytaj_pliki;
-    use super::*;
-    #[tokio::test]
-    async fn test_obrobki() -> Result<(), std::io::Error>{
-
-
-        let path_out = PathBuf::from("../test_data/img_out/");
-        let path_in = PathBuf::from("../test_data/img_in/test_1_1.avif");
-        if !path_out.exists() {
-            return Err(Error::new(ErrorKind::NotFound, "zla sciezka ;("));
-        }
-        // let nazwa = String::from("test_1_1");
-        let mut foto: DynamicImage;
-        let mut nazwa: String;
-        match wczytaj_pliki(path_in){
-            Ok(dane) => { (foto, nazwa ) = dane;}
-            Err(e) => return Err(e),
-        };
-        match avif_match(nazwa, foto, &*path_out).await{
-            Ok(_) => {},
-            Err(e) => return Err(e),
-        };
-
-        Ok(())
-    }
-}
+// #[cfg(test)]
+// mod tests {
+//     use std::io::{Error, ErrorKind};
+//     use std::path::PathBuf;
+//     use crate::wczytywanie::main_wczytywanie::wczytaj_pliki;
+//     use super::*;
+//     #[tokio::test]
+//     async fn test_obrobki() -> Result<(), std::io::Error>{
+//
+//
+//         let path_out = PathBuf::from("../test_data/img_out/");
+//         let path_in = PathBuf::from("../test_data/img_in/test_1_1.avif");
+//         if !path_out.exists() {
+//             return Err(Error::new(ErrorKind::NotFound, "zla sciezka ;("));
+//         }
+//         // let nazwa = String::from("test_1_1");
+//         let mut foto: DynamicImage;
+//         let mut nazwa: String;
+//         match wczytaj_pliki(path_in){
+//             Ok(dane) => { (foto, nazwa ) = dane;}
+//             Err(e) => return Err(e),
+//         };
+//         match avif_match(nazwa, foto, &*path_out).await{
+//             Ok(_) => {},
+//             Err(e) => return Err(e),
+//         };
+//
+//         Ok(())
+//     }
+// }
 

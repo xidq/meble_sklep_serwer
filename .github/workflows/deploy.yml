@@ -11,7 +11,7 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  # --- ETAP 1: TESTOWANIE (działa na obu branchach) ---
+  # --- ETAP 1: TESTOWANIE ---
   test:
     runs-on: ubuntu-latest
     steps:
@@ -30,10 +30,10 @@ jobs:
           USERS_DB_ENCRYPTION_KEY: ${{ secrets.USERS_DB_ENCRYPTION_KEY }}
         run: cargo test
 
-  # --- ETAP 2: BUDOWANIE (działa TYLKO na mainie) ---
+  # --- ETAP 2: BUDOWANIE ---
   build-and-push:
     needs: test
-    if: github.ref == 'refs/heads/main' # To jest kluczowe! Buduje tylko na mainie
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -59,39 +59,3 @@ jobs:
           context: .
           push: true
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-          build-args: |
-            JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}
-            DATABASE_URL=${{ secrets.DATABASE_URL }}
-            FRONTEND_SERVER=${{ secrets.FRONTEND_SERVER }}
-            PEPPER_KEY=${{ secrets.PEPPER_KEY }}
-            USERS_DB_ENCRYPTION_KEY=${{ secrets.USERS_DB_ENCRYPTION_KEY }}
-#
-#  terraform-plan:
-#    needs: test
-#    runs-on: ubuntu-latest
-#    steps:
-#      - uses: actions/checkout@v4
-#      - uses: hashicorp/setup-terraform@v3
-#      - run: terraform init && terraform plan
-#
-#  terraform-apply:
-#    needs: terraform-plan
-#    if: github.ref == 'refs/heads/main'
-#    runs-on: ubuntu-latest
-#    steps:
-#      - uses: actions/checkout@v4
-#      - uses: hashicorp/setup-terraform@v3
-#      - run: terraform apply -auto-approve
-#
-#  ansible-deploy:
-#    needs: terraform-apply
-#    if: github.ref == 'refs/heads/main'
-#    runs-on: ubuntu-latest
-#    steps:
-#      - uses: actions/checkout@v4
-#      - name: Run Ansible Playbook
-#        uses: dawidd6/action-ansible-playbook@v2
-#        with:
-#          playbook: site.yml
-#          key: ${{ secrets.SSH_PRIVATE_KEY }}
-#          inventory: inventory.ini

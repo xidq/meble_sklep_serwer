@@ -36,10 +36,10 @@ fn pepper_password(plain_password: &str, pepper: &[u8]) -> String {
     bbb
 }
 
-fn pepper_key() -> String {
-    println!("pepper key!!!");
-    std::env::var("PEPPER_KEY").expect("Brak PEPPER_KEY w .env")
-}
+// fn pepper_key() -> String {
+//     println!("pepper key!!!");
+//     std::env::var("PEPPER_KEY").expect("Brak PEPPER_KEY w .env")
+// }
 
 impl User {
     // nowy użytkownik i auto hash hasła, hash ma już salt ;)

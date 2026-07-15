@@ -5,10 +5,10 @@ mod post;
 mod delete;
 pub mod upload;
 
-use std::collections::BTreeMap;
+use crate::FILES_LOCATION;
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, Row};
-use crate::model::Model;
+use std::collections::BTreeMap;
 
 type Rozdzielczosc = String; // np. "16", "32"
 type WariantFoto = String;      // np. "var_1", "var_2"
@@ -34,4 +34,8 @@ impl<'r> FromRow<'r, sqlx::sqlite::SqliteRow> for FotoData {
             warianty_zdjec,
         })
     }
+}
+pub fn get_items_prefix<'a>() -> &'a str {
+    println!("items prefix!!!");
+    FILES_LOCATION.get().expect("PEPPER_KEY nie jest zainicjalizowany")
 }

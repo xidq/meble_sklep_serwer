@@ -16,8 +16,11 @@ jsonwebtoken = { workspace = true }
 regex = { workspace = true }
 dotenvy = { workspace = true }
 tower_governor = { workspace = true }
-products = { path = "../products" }
 models = { path = "../models" }
 sqlite_serv = { path = "../sqlite_serv" }
 id_handling = { path = "../id_handling" }
 sqlx = { workspace = true}
+tower = { workspace = true }
+tokio-tungstenite = { workspace = true }
+reqwest = { workspace = true }
+http = { workspace = true }

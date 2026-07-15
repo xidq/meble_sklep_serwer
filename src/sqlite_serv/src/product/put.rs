@@ -1,15 +1,15 @@
-use axum::extract::{Path, State};
+use crate::product::Product;
+use crate::sql::AppState;
+use axum::extract::State;
 use axum::Json;
 use http::StatusCode;
 use sqlx::SqlitePool;
-use crate::product::Product;
-use crate::sql::AppState;
 
 pub async fn handle_edit_product(
     State(state): State<AppState>,
     Json(payload): Json<Product>,
 ) -> Result<StatusCode, (StatusCode, String)> {
-    println!("Odebrano żądanie zmiany produktu id: {}", &payload.id);
+    println!("Odebrano żądanie zmiany produktu id: {}", payload.id);
     edit_product(
         &state.db,
         &payload,

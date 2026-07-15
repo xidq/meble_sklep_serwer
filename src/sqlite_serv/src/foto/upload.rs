@@ -1,5 +1,5 @@
 use crate::auth::sending_data::{files_send_to_server, json_send_to_server, RodzajeDanychJson};
-use crate::foto::FotoData;
+use crate::foto::{get_items_prefix, FotoData};
 use crate::product::get::get_products_id_by_nameid;
 use crate::sql::AppState;
 use avif_image_handler::save::avif_match;
@@ -28,7 +28,7 @@ pub async fn handler_image_upload_to_server(
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Błąd ID: {}", e)))?;
 
     // 2. Tworzymy folder queued DLA TEGO KONKRETNEGO PRODUKTU
-    let queued_path = format!("src/api/products/{}/queued", item_name_id);
+    let queued_path = format!("{}/products/{}/queued", get_items_prefix(), item_name_id);
     tokio::fs::create_dir_all(&queued_path)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Błąd folderu: {}", e)))?;
@@ -41,10 +41,10 @@ pub async fn handler_image_upload_to_server(
         let path = std::path::Path::new(&queued_path).join(&file_name);
 
         if let Ok(data) = field.bytes().await
-            && let Ok(mut file) = tokio::fs::File::create(&path).await {
-                if file.write_all(&data).await.is_ok() {
+            && let Ok(mut file) = tokio::fs::File::create(&path).await
+                && file.write_all(&data).await.is_ok() {
                     saved_files.push(path);
-                }
+
 
         }
     }
@@ -74,7 +74,7 @@ async fn background_image_processor(
     println!("Rozpoczęto konwersję w tle dla: {}", item_name_id);
 
     // Docelowy folder na przekonwertowane pliki
-    let final_dir = PathBuf::from(format!("src/api/products/{}/images", item_name_id));
+    let final_dir = PathBuf::from(format!("{}/products/{}/images", get_items_prefix(), item_name_id));
     let _ = tokio::fs::create_dir_all(&final_dir).await;
 
     // 1. KONWERSJA AVIF
@@ -152,7 +152,7 @@ async fn background_image_processor(
 
     // 2. Pobranie danych z bazy
     let model_data = get_image_data_by_id(product_id, &pool).await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string())).map_err(|e| format!("Błąd pobierania danych z bazy: {:?}", e))?;;
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string())).map_err(|e| format!("Błąd pobierania danych z bazy: {:?}", e))?;
 
     // 3. Konwersja na JSON gotowy do wysyłki
     // Dzięki #[serde(flatten)], serde_json zamieni strukturę na płaski obiekt:

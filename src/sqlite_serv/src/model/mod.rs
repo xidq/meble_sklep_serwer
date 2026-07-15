@@ -6,7 +6,7 @@ pub mod upload;
 
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
-use sqlx::{Column, FromRow, Row};
+use sqlx::{FromRow, Row};
 
 type Lod = String; // np. "LOD0", "LOD1"
 #[derive(Serialize, Deserialize, /*FromRow,*/ Debug, Clone)]

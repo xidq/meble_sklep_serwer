@@ -1,8 +1,7 @@
-use std::cmp::PartialEq;
-use http::StatusCode;
-use sqlx::SqlitePool;
 use crate::auth::claims::Claims;
 use crate::user::{match_role, User, UserRola};
+use http::StatusCode;
+use sqlx::SqlitePool;
 
 
 pub fn check_is_admin(claims: &Claims) -> Result<(), (StatusCode, String)>{

@@ -1,10 +1,9 @@
-use std::collections::BTreeMap;
+use crate::model::Model;
+use crate::sql::AppState;
 use axum::extract::State;
 use axum::Json;
 use http::StatusCode;
-use sqlx::{Row, SqlitePool};
-use crate::model::Model;
-use crate::sql::AppState;
+use sqlx::SqlitePool;
 
 pub async fn handler_get_models_list(
     State(state): State<AppState>,

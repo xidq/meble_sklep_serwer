@@ -1,7 +1,7 @@
 [workspace]
 members = [
     "src/server",
-    "src/login", "src/auth", "src/products", "src/models", "src/id_handling", "src/sqlite_serv", "src/avif_image_handler",
+    "src/login", "src/auth", "src/models", "src/id_handling", "src/sqlite_serv", "src/avif_image_handler",
 ]
 
 
@@ -43,7 +43,7 @@ sqlx = { version = "0.9.0", features = [
     "macros"
 ] }
 anyhow = "1.0.103"
-reqwest = { version = "0.13.4", features = ["multipart", "json"] }
+reqwest = { version = "0.13.4", features = ["multipart", "json", "rustls"] }
 bzip2 = "0.6.1"
 exr = "1.74.1"
 image = "0.25.10"
