@@ -104,18 +104,15 @@ jobs:
 
       - name: Merge dev into main and push
         run: |
-#          git checkout main
-#          git merge origin/dev --no-ff -m "chore: auto-merge dev to main [skip ci]"
-#          git push origin main
-      # 1. Pobierz zdalną gałąź main i stwórz dla niej lokalną referencję
-           git fetch origin main:main
-
-      # 2. Teraz Git bez problemu przełączy się na lokalne 'main' i będzie śledził 'origin/main'
-           git checkout main
-
-      # 3. Wykonaj merge i push
-           git merge origin/dev --no-ff -m "chore: auto-merge dev to main [skip ci]"
-           git push origin main
+          # 1. Pobierz zdalną gałąź main i stwórz dla niej lokalną referencję
+          git fetch origin main:main
+          
+          # 2. Teraz Git bez problemu przełączy się na lokalne 'main'
+          git checkout main
+          
+          # 3. Wykonaj merge i push
+          git merge origin/dev --no-ff -m "chore: auto-merge dev to main [skip ci]"
+          git push origin main
 
   # --- ETAP 3: BUDOWANIE (Tylko po pushu lub merge na main) ---
   build-and-push:
