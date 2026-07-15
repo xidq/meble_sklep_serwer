@@ -1,0 +1,67 @@
+name: CI - Test Dev
+
+on:
+  push:
+    branches:
+      - dev
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            pkg-config \
+            libssl-dev \
+            gcc \
+            g++ \
+            clang \
+            cmake \
+            git \
+            libsqlite3-dev \
+            libavif-dev \
+            libheif-dev
+
+      - name: Build and install libheif v1.21.1
+        run: |
+          git clone --depth 1 --branch v1.21.1 https://github.com/strukturag/libheif.git /tmp/libheif
+          cd /tmp/libheif
+          mkdir build && cd build
+          cmake -DCMAKE_BUILD_TYPE=Release ..
+          make -j$(nproc)
+          sudo make install
+          sudo ldconfig
+          rm -rf /tmp/libheif
+
+      - name: Create DB, Migrations and Files directories
+        run: |
+          mkdir -p src/api
+          mkdir -p data
+          touch data/data.db
+          mkdir -p migrations/data
+
+      - name: Install sqlx-cli and run migrations
+        run: |
+          cargo install sqlx-cli --no-default-features --features sqlite
+          sqlx migrate run --source migrations/data --database-url sqlite:data/data.db
+
+      - name: Run tests
+        env:
+          DATABASE_URL: sqlite:data/data.db
+          FILES_URL: src/api/
+          JWT_SECRET_KEY: "super_tajny_klucz_testowy_dla_jwt_o_odpowiedniej_dlugosci_32_bajtow_minimum"
+          FRONTEND_SERVER: "http://localhost:3000"
+          PEPPER_KEY: "testowy_pepper_do_haszowania"
+          USERS_DB_ENCRYPTION_KEY: "testowy_klucz_szyfrowania_bazy_sqlcipher_12345"
+        run: cargo test
