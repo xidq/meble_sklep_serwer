@@ -21,31 +21,33 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
-      # 🔥 KROK 1: Instalujemy podstawowe biblioteki systemowe (BEZ starego libavif-dev)
-      # Dodatkowo instalujemy cmake i ninja do szybkiej kompilacji najnowszego libavif ze źródeł
+      # 🔥 KROK 1: Instalujemy narzędzia i biblioteki dokładnie tak, jak w Twoim Dockerze
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y pkg-config libsqlite3-dev libssl-dev libheif-dev cmake ninja-build
-          
-          # 🔥 KROK 1.5: Pobieramy, budujemy i instalujemy najnowsze libavif bezpośrednio z GitHuba
-      # Dodaliśmy flagi automatycznego pobierania libyuv oraz kodeka AOM, aby uniknąć błędów brakujących zależności.
-      - name: Build and install latest libavif from source
+          sudo apt-get install -y \
+            pkg-config \
+            libssl-dev \
+            gcc \
+            g++ \
+            clang \
+            cmake \
+            git \
+            libsqlite3-dev \
+            libavif-dev \
+            libheif-dev
+
+      # 🔥 KROK 1.5: Pobieramy, budujemy i instalujemy libheif v1.21.1 (identycznie jak w Dockerze)
+      - name: Build and install libheif v1.21.1
         run: |
-          git clone https://github.com/AOMediaCodec/libavif.git
-          cd libavif
-          # Konfigurujemy build przy użyciu CMake i Ninja
-          # -DAVIF_LIBYUV=LOCAL pobiera i kompiluje libyuv automatycznie
-          # -DAVIF_CODEC_AOM=LOCAL pobiera i kompiluje kodek AOM (AV1) automatycznie
-          cmake -S . -B build -G Ninja \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DAVIF_LIBYUV=LOCAL \
-            -DAVIF_CODEC_AOM=LOCAL \
-            -DAVIF_BUILD_APPS=OFF
-          # Kompilujemy i instalujemy w ścieżkach systemowych (/usr/local)
-          sudo cmake --build build --target install
-          # Odświeżamy cache linker'a, aby system oraz Rust widzieli nową bibliotekę
+          git clone --depth 1 --branch v1.21.1 https://github.com/strukturag/libheif.git /tmp/libheif
+          cd /tmp/libheif
+          mkdir build && cd build
+          cmake -DCMAKE_BUILD_TYPE=Release ..
+          make -j$(nproc)
+          sudo make install
           sudo ldconfig
+          rm -rf /tmp/libheif
 
       # 🔥 KROK 2: Przygotowujemy strukturę katalogów pod bazę danych i pliki dla testów
       - name: Create DB and Files directories
