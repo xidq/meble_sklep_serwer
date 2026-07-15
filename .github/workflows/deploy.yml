@@ -105,7 +105,7 @@ jobs:
       - name: Merge dev into master and push
         run: |
           # 1. Pobierz zdalną gałąź master i stwórz dla niej lokalną referencję
-          git fetch origin main:master
+          git fetch origin master:master
           
           # 2. Teraz Git bez problemu przełączy się na lokalne 'master'
           git checkout master
@@ -114,10 +114,10 @@ jobs:
           git merge origin/dev --no-ff -m "chore: auto-merge dev to master [skip ci]"
           git push origin master
 
-  # --- ETAP 3: BUDOWANIE (Tylko po pushu lub merge na main) ---
+  # --- ETAP 3: BUDOWANIE (Tylko po pushu lub merge na master) ---
   build-and-push:
     needs: test
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     permissions:
       contents: read
