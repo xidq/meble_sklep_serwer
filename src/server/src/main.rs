@@ -173,7 +173,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
     // let addr_str = format!("0.0.0.0:{}", port);
     // #[cfg(docker)]
     let addr = if cfg!(docker) {
-        let port = std::env::var("PORT").unwrap_or_else(|_| "8080".to_string());
+        let port = std::env::var("CURRENT_RUST_SERVER_PORT").unwrap_or_else(|_| "8080".to_string());
         let addr_str = format!("0.0.0.0:{}", port);
         SocketAddr::from_str(&addr_str)
             .unwrap_or_else(|_| SocketAddr::from(([0, 0, 0, 0], 8080)))

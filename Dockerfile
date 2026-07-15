@@ -56,6 +56,9 @@ RUN apt-get update && apt-get install -y \
 # Kopiujemy gotowy plik binarny
 COPY --from=builder /app/target/docker/server /app/server
 
-EXPOSE 8080
+ARG CURRENT_RUST_SERVER_PORT=8080
+ENV CURRENT_RUST_SERVER_PORT=${CURRENT_RUST_SERVER_PORT}
+
+EXPOSE ${CURRENT_RUST_SERVER_PORT}
 
 CMD ["./server"]

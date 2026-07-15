@@ -62,6 +62,15 @@ jobs:
           # Tworzymy katalog na migracje (wymagany przez makro sqlx::migrate!)
           mkdir -p migrations/data
 
+      # 🔥 KROK 2.5: Instalujemy sqlx-cli i aplikujemy migracje DO bazy przed kompilacją testów
+      - name: Install sqlx-cli and run migrations
+        run: |
+          # Instalujemy tylko lekki silnik sqlite dla sqlx-cli, żeby nie kompilować całego narzędzia
+          cargo install sqlx-cli --no-default-features --features sqlite
+          
+          # Uruchamiamy migracje na naszej świeżo stworzonej bazie testowej
+          sqlx migrate run --source migrations/data --database-url sqlite:data/data.db
+
       # 🔥 KROK 3: Uruchomienie testów z całkowicie zhardkodowanymi sekretami testowymi
       - name: Run tests
         env:
