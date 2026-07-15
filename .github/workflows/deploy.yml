@@ -6,6 +6,11 @@ on:
       - dev
       - master
 
+# To daje wbudowanemu tokenowi GitHuba uprawnienie do robienia merge do gałęzi master
+permissions:
+  contents: write
+  packages: write
+
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
@@ -56,14 +61,30 @@ jobs:
           USERS_DB_ENCRYPTION_KEY: "testowy_klucz_szyfrowania_bazy_sqlcipher_12345"
         run: cargo test
 
-  # --- ETAP 2: BUDOWANIE (Tylko gdy master dostanie push od Ciebie) ---
+  # --- ETAP 2: AUTOMATYCZNY MERGE (Tylko gdy dev przejdzie testy) ---
+  merge-dev-to-master:
+    needs: test
+    if: github.ref == 'refs/heads/dev'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Merge dev -> master
+        uses: devmasx/merge-branch@master
+        with:
+          type: now
+          from_branch: dev
+          target_branch: master
+          message: "chore: automatic merge dev to master [skip ci]"
+          # Używamy wbudowanego, bezpiecznego tokenu GitHuba
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+  # --- ETAP 3: BUDOWANIE (Tylko gdy master dostanie push — czyli po udanym merge) ---
   build-and-push:
     needs: test
     if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
