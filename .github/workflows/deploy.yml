@@ -61,24 +61,31 @@ jobs:
           USERS_DB_ENCRYPTION_KEY: "testowy_klucz_szyfrowania_bazy_sqlcipher_12345"
         run: cargo test
 
-  # --- ETAP 2: AUTOMATYCZNY MERGE (Tylko gdy dev przejdzie testy) ---
+  # --- ETAP 2: AUTOMATYCZNY MERGE (Tworzy PR i od razu go scala) ---
   merge-dev-to-master:
     needs: test
     if: github.ref == 'refs/heads/dev'
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Merge dev -> master
-        uses: devmasx/merge-branch@master
-        with:
-          type: now
-          from_branch: dev
-          target_branch: master
-          message: "chore: automatic merge dev to master [skip ci]"
-          # Używamy wbudowanego, bezpiecznego tokenu GitHuba
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create and merge Pull Request via GitHub CLI
+        env:
+          # Używamy wbudowanego tokenu opartego o uprawnienia zapisu
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "📨 Tworzenie Pull Requesta z dev do master..."
+          PR_URL=$(gh pr create \
+            --head dev \
+            --base master \
+            --title "chore: automatic merge dev to master [skip ci]" \
+            --body "Automatyczny merge po udanych testach na dev.")
+          
+          echo "✅ PR utworzony: $PR_URL"
+          
+          echo "🔀 Automatyczne scalanie PR..."
+          gh pr merge "$PR_URL" --merge --admin --delete-branch=false
 
   # --- ETAP 3: BUDOWANIE (Tylko gdy master dostanie push — czyli po udanym merge) ---
   build-and-push:
