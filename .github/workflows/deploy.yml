@@ -83,36 +83,45 @@ jobs:
           USERS_DB_ENCRYPTION_KEY: "testowy_klucz_szyfrowania_bazy_sqlcipher_12345"
         run: cargo test
 
-  # --- ETAP 2: AUTOMATYCZNY MERGE (Tylko po udanych testach na dev) ---
+  # --- ETAP 2: AUTOMATYCZNY PR I MERGE DO MASTER (Tylko po udanych testach na dev) ---
   merge-to-master:
     needs: test
     if: github.ref == 'refs/heads/dev'
     runs-on: ubuntu-latest
     permissions:
-      contents: write # Daje uprawnienia do pushowania zmian z merge do repozytorium
+      contents: write       # Wymagane do scalenia kodu
+      pull-requests: write  # Wymagane do utworzenia i zatwierdzenia PR
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 # Pobieramy pełną historię gita do prawidłowego merge'owania
-          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Configure Git
+      - name: Create and Merge Pull Request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-
-      - name: Merge dev into master and push
-        run: |
-          # 1. Pobierz zdalną gałąź master i stwórz dla niej lokalną referencję
-          git fetch origin master:master
+          # Sprawdzamy, czy istnieje już otwarty PR z dev do master, aby nie dublować
+          EXISTING_PR=$(gh pr list --head dev --base master --state open --json number --jq '.[0].number')
           
-          # 2. Teraz Git bez problemu przełączy się na lokalne 'master'
-          git checkout master
+          if [ -z "$EXISTING_PR" ]; then
+            echo "Tworzenie nowego Pull Requestu..."
+            # Tworzy PR z dev do master z pominięciem kolejnych akcji w commitach ([skip ci])
+            PR_URL=$(gh pr create \
+              --head dev \
+              --base master \
+              --title "chore: auto-merge dev to master" \
+              --body "Automatyczny PR wygenerowany przez GitHub Actions po udanych testach.")
+            echo "Utworzono PR: $PR_URL"
           
-          # 3. Wykonaj merge i push
-          git merge origin/dev --no-ff -m "chore: auto-merge dev to master [skip ci]"
-          git push origin master
+            # Pobieramy numer nowo stworzonego PR
+            PR_NUM=$(gh pr view --json number --jq '.number')
+          else
+            echo "PR już istnieje: #$EXISTING_PR"
+            PR_NUM=$EXISTING_PR
+          fi
+          
+          # Włączamy auto-merge przy użyciu metody "merge" (odpowiednik --no-ff)
+          echo "Scalanie Pull Requestu #$PR_NUM..."
+          gh pr merge "$PR_NUM" --merge --admin --delete-branch=false
 
   # --- ETAP 3: BUDOWANIE (Tylko po pushu lub merge na master) ---
   build-and-push:
