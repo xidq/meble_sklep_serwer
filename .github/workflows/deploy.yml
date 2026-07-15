@@ -11,7 +11,7 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  # --- ETAP 1: TESTOWANIE ---
+  # --- ETAP 1: TESTOWANIE (Dla dev i master) ---
   test:
     runs-on: ubuntu-latest
     steps:
@@ -21,60 +21,33 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
-      # 🔥 KROK 1: Instalujemy narzędzia i biblioteki dokładnie tak, jak w Twoim Dockerze
       - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            pkg-config \
-            libssl-dev \
-            gcc \
-            g++ \
-            clang \
-            cmake \
-            git \
-            libsqlite3-dev \
-            libavif-dev \
-            libheif-dev
+            pkg-config libssl-dev gcc g++ clang cmake git libsqlite3-dev libavif-dev libheif-dev
 
-      # 🔥 KROK 1.5: Pobieramy, budujemy i instalujemy libheif v1.21.1 (identycznie jak w Dockerze)
       - name: Build and install libheif v1.21.1
         run: |
           git clone --depth 1 --branch v1.21.1 https://github.com/strukturag/libheif.git /tmp/libheif
-          cd /tmp/libheif
-          mkdir build && cd build
+          cd /tmp/libheif && mkdir build && cd build
           cmake -DCMAKE_BUILD_TYPE=Release ..
           make -j$(nproc)
-          sudo make install
-          sudo ldconfig
+          sudo make install && sudo ldconfig
           rm -rf /tmp/libheif
 
-      # 🔥 KROK 2: Przygotowujemy strukturę katalogów i plik bazy danych pod testy
       - name: Create DB, Migrations and Files directories
         run: |
-          # Tworzymy katalog na pliki
-          mkdir -p src/api
-          
-          # Tworzymy katalog na bazę danych i inicjalizujemy pusty plik bazy
-          mkdir -p data
+          mkdir -p src/api data migrations/data
           touch data/data.db
-          
-          # Tworzymy katalog na migracje (wymagany przez makro sqlx::migrate!)
-          mkdir -p migrations/data
 
-      # 🔥 KROK 2.5: Instalujemy sqlx-cli i aplikujemy migracje DO bazy przed kompilacją testów
       - name: Install sqlx-cli and run migrations
         run: |
-          # Instalujemy tylko lekki silnik sqlite dla sqlx-cli, żeby nie kompilować całego narzędzia
           cargo install sqlx-cli --no-default-features --features sqlite
-          
-          # Uruchamiamy migracje na naszej świeżo stworzonej bazie testowej
           sqlx migrate run --source migrations/data --database-url sqlite:data/data.db
 
-      # 🔥 KROK 3: Uruchomienie testów z całkowicie zhardkodowanymi sekretami testowymi
       - name: Run tests
         env:
-          # Wszystkie sekrety zostały zhardkodowane bezpiecznymi wartościami testowymi
           DATABASE_URL: sqlite:data/data.db
           FILES_URL: src/api/
           JWT_SECRET_KEY: "super_tajny_klucz_testowy_dla_jwt_o_odpowiedniej_dlugosci_32_bajtow_minimum"
@@ -83,45 +56,7 @@ jobs:
           USERS_DB_ENCRYPTION_KEY: "testowy_klucz_szyfrowania_bazy_sqlcipher_12345"
         run: cargo test
 
-  # --- ETAP 2: AUTOMATYCZNY PR I MERGE DO MASTER (Tylko po udanych testach na dev) ---
-  merge-to-master:
-    needs: test
-    if: github.ref == 'refs/heads/dev'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Create and Merge Pull Request
-        env:
-          # 🔥 Zmieniamy GITHUB_TOKEN na Twój osobisty ADMIN_PAT
-          GH_TOKEN: ${{ secrets.GIT_WSIO_NA_ACTIONS_LEL }}
-        run: |
-          EXISTING_PR=$(gh pr list --head dev --base master --state open --json number --jq '.[0].number')
-          
-          if [ -z "$EXISTING_PR" ]; then
-            echo "Tworzenie nowego Pull Requestu..."
-            PR_URL=$(gh pr create \
-              --head dev \
-              --base master \
-              --title "chore: auto-merge dev to master" \
-              --body "Automatyczny PR wygenerowany przez GitHub Actions po udanych testach.")
-            echo "Utworzono PR: $PR_URL"
-          
-            PR_NUM=$(gh pr view --json number --jq '.number')
-          else
-            echo "PR już istnieje: #$EXISTING_PR"
-            PR_NUM=$EXISTING_PR
-          fi
-
-          # Ponieważ używamy Twojego ADMIN_PAT, ta komenda pomyślnie ominie ochronę gałęzi
-          echo "Scalanie Pull Requestu #$PR_NUM..."
-          gh pr merge "$PR_NUM" --merge --admin --delete-branch=false
-
-  # --- ETAP 3: BUDOWANIE (Tylko po pushu lub merge na master) ---
+  # --- ETAP 2: BUDOWANIE (Tylko gdy master dostanie push od Ciebie) ---
   build-and-push:
     needs: test
     if: github.ref == 'refs/heads/master'
@@ -129,7 +64,6 @@ jobs:
     permissions:
       contents: read
       packages: write
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="DataSourcePerFileMappings">
+    <file url="file://$APPLICATION_CONFIG_DIR$/consoles/db/2d92c07e-3363-4918-ad46-03b010d34d94/console_1.sql" value="2d92c07e-3363-4918-ad46-03b010d34d94" />
+    <file url="file://$APPLICATION_CONFIG_DIR$/consoles/db/2d92c07e-3363-4918-ad46-03b010d34d94/console_2.sql" value="2d92c07e-3363-4918-ad46-03b010d34d94" />
+    <file url="file://$PROJECT_DIR$/src/sqlite_serv/src/user/get.rs" value="2d92c07e-3363-4918-ad46-03b010d34d94" />
+  </component>
+</project>
