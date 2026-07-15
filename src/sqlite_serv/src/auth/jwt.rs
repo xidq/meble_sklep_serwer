@@ -90,7 +90,7 @@ pub fn initialize_jwt_secret() {
         rand::rng().fill(&mut dynamic_key);
 
         JWT_SECRET.set(dynamic_key.to_vec()).expect("Błąd inicjalizacji klucza (release)");
-        println!("🔑 RELEASE: Wygenerowano losowy klucz JWT.");
+        println!("RELEASE: Wygenerowano losowy klucz JWT.");
     }
 
     // ładowany z konfiguracji
@@ -100,6 +100,6 @@ pub fn initialize_jwt_secret() {
             .expect("W trybie debug zmienna JWT_SECRET_KEY jest wymagana!");
 
         JWT_SECRET.set(secret.into_bytes()).expect("Błąd inicjalizacji klucza (debug)");
-        println!("🔑 DEBUG: Załadowano klucz JWT z konfiguracji.");
+        println!("DEBUG: Załadowano klucz JWT z konfiguracji.");
     }
 }
