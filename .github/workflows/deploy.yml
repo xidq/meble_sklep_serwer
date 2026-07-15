@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - dev
-      - main
+      - master
 
 env:
   REGISTRY: ghcr.io
@@ -84,7 +84,7 @@ jobs:
         run: cargo test
 
   # --- ETAP 2: AUTOMATYCZNY MERGE (Tylko po udanych testach na dev) ---
-  merge-to-main:
+  merge-to-master:
     needs: test
     if: github.ref == 'refs/heads/dev'
     runs-on: ubuntu-latest
