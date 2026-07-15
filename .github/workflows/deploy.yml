@@ -102,17 +102,17 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Merge dev into main and push
+      - name: Merge dev into master and push
         run: |
-          # 1. Pobierz zdalną gałąź main i stwórz dla niej lokalną referencję
-          git fetch origin main:main
+          # 1. Pobierz zdalną gałąź master i stwórz dla niej lokalną referencję
+          git fetch origin main:master
           
-          # 2. Teraz Git bez problemu przełączy się na lokalne 'main'
-          git checkout main
+          # 2. Teraz Git bez problemu przełączy się na lokalne 'master'
+          git checkout master
           
           # 3. Wykonaj merge i push
-          git merge origin/dev --no-ff -m "chore: auto-merge dev to main [skip ci]"
-          git push origin main
+          git merge origin/dev --no-ff -m "chore: auto-merge dev to master [skip ci]"
+          git push origin master
 
   # --- ETAP 3: BUDOWANIE (Tylko po pushu lub merge na main) ---
   build-and-push:
