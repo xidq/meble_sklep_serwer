@@ -31,56 +31,9 @@ pub fn extract_and_verify_jwt(headers: &HeaderMap) -> Result<Claims, StatusCode>
         .map_err(|_| StatusCode::UNAUTHORIZED) // Jeśli podpis sfałszowany lub token wygasł err401
 }
 
-// pub fn load_users_from_json() -> Vec<User> {
-//
-//     let path = Path::new("../../../api/login/usrs.json");
-//     let file = match File::open(path) {
-//         Ok(f) => f,
-//         Err(_) => {
-//             println!("UWAGA: Nie znaleziono pliku usrs.json, zwracam pustą listę!\n {}", path.display() );
-//             return vec![];
-//         }
-//     };
-//     let reader = BufReader::new(file);
-//     serde_json::from_reader(reader).unwrap_or_else(|_| vec![])
-// }
-// pub async fn get_user_by_username(pool: &SqlitePool, username: &str) -> Result<Option<User>, sqlx::Error> {
-//     let row = sqlx::query("SELECT * FROM users WHERE username = ?")
-//         .bind(username)
-//         .fetch_optional(pool)
-//         .await?;
-//
-//     if let Some(r) = row {
-//         // Wyciągamy surowe dane tekstowe z kolumn bazy danych
-//         let permission_str: String = r.get("permission");
-//
-//         // Mapujemy tekst z bazy z powrotem na Twój enum UsrPermit
-//         let permission = match permission_str.as_str() {
-//             "Admin" => UserRola::Admin,
-//             "User" => UserRola::User,
-//             _ => UserRola::Guest,
-//         };
-//
-//         // SQLite domyślnie zwraca liczby jako i64.
-//         // Jeśli w Twojej strukturze User.id to np. i32 lub u32, dodaj rzutowanie: r.get::<i64, _>("id") as u32
-//         let user_id: i64 = r.get("id");
-//         let valid_str: String = r.get("valid");
-//         let is_valid = valid_str == "true" || valid_str == "1";
-//
-//         Ok(Some(User {
-//             id: user_id,
-//             username: "".to_string(),
-//             name: r.get("username"),
-//             email: None,
-//             password_hash: r.get("password_hash"),
-//             permission,
-//             valid: is_valid,
-//         }))
-//     } else {
-//         Ok(None) // Nie znaleziono użytkownika o takim loginie
-//     }
-// }
-
+/// Initializing JWT, different effect for dev and -r.
+/// 
+/// For debug|tests is taken from env file
 pub fn initialize_jwt_secret() {
     // losowy klucz przy każdym starcie
     #[cfg(not(debug_assertions))]

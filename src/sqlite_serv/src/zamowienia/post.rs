@@ -1,5 +1,5 @@
 use crate::auth::claims::Claims;
-use crate::sql::AppState;
+use crate::AppState;
 use crate::zamowienia::{CaloscioweZamowienie, Zamowienie, ZamowieniePozycja};
 use axum::extract::State;
 use axum::Json;

@@ -42,10 +42,11 @@ pub struct User{
     pub valid: bool,
 }
 #[derive(Serialize, Deserialize, Debug, Clone, Display, PartialEq)]
-#[derive(sqlx::Type)] // <-- To naprawia błędy E0277!
-#[sqlx(rename_all = "PascalCase")] // SQLite będzie widzieć wartości jako: "Admin", "User", "Guest"
+#[derive(sqlx::Type)]
+#[sqlx(rename_all = "PascalCase")]
 pub enum UserRola{
     Admin,
+    Legituser,
     User,
     Guest
 }
@@ -55,6 +56,7 @@ pub fn match_role(string: &str) -> UserRola{
     match string.to_lowercase().as_str() {
         "admin" => UserRola::Admin,
         "user" => UserRola::User,
+        "legituser" => UserRola::Legituser,
         _ => UserRola::Guest
     }
 }
@@ -91,7 +93,7 @@ impl User {
         let password_hash = hash(&peppered, 12)?;
 
         Ok(Self {
-            id: 0, // Baza danych nadpisze to swoim SERIAL/AUTOINCREMENT przy insercie
+            id: 0, // nadpisywane przez db
             username: username.into(),
             name,
             email,

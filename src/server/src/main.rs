@@ -6,7 +6,7 @@ mod tests;
 mod router;
 
 use crate::router::routing::build_router;
-use sqlite_serv::sql::AppState;
+use sqlite_serv::AppState;
 use sqlite_serv::{FILES_LOCATION, PEPPER_KEY};
 use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions};
 use std::net::SocketAddr;
@@ -37,7 +37,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
 
         SqlitePoolOptions::new()
             .max_connections(5)
-            .connect_with(connection_options) // <--- TUTAJ używamy opcji!
+            .connect_with(connection_options)
             .await?
     } else {
         SqlitePoolOptions::new()

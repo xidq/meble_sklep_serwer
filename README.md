@@ -12,9 +12,9 @@ The server is responsible for core business logic, secure data persistence, fina
 
 - **HTTP & WebSocket Engine** – Built on Axum 0.8 and Tokio. Provides REST endpoints and real-time WebSocket communication.
 - **Three-Tier Authorization** – Enforces the final, most granular security and business-rule checks, serving as the ultimate access-control point behind the JS frontend and the Go intermediary.
-- **Dual SQLite Storage**  
-  - `rusqlite` (with `bundled-sqlcipher`) handles encrypted database operations.  
-  - `sqlx` is used for asynchronous queries and migrations on non-encrypted datasets.
+- **Dual SQLite Storage**
+    - `rusqlite` (with `bundled-sqlcipher`) handles encrypted database operations.
+    - `sqlx` is used for asynchronous queries and migrations on non-encrypted datasets.
 - **Zero-Copy File Streaming** – Axum’s native `multipart` and `Stream` support (via `futures-util`) allows uploading and downloading large files with minimal memory footprint.
 - **Modern Image Processing** – A dedicated `avif_image_handler` workspace decodes HEIC/HEIF images and converts them to optimized AVIF or WebP formats using `libheif-rs`, `image`, `webp`, and `png`.
 - **Security** – JSON Web Token authentication (`jsonwebtoken`), password hashing (`bcrypt`), and request rate-limiting (`tower_governor`).

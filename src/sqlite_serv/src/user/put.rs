@@ -1,6 +1,6 @@
 use crate::auth::claims::Claims;
 use crate::auth::permissions::{check_is_admin, check_is_own_acc};
-use crate::sql::AppState;
+use crate::AppState;
 use crate::user::{match_role, pepper_password, User};
 use axum::extract::State;
 use axum::Json;

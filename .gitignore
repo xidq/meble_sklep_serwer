@@ -6,3 +6,5 @@
 /src/test_data/
 *.sh
 /*.sh
+/data/
+/.idea/
