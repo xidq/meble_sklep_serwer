@@ -19,7 +19,8 @@ pub struct RegisterRequest {
     #[serde(default, deserialize_with = "empty_string_as_none")]
     pub email: Option<String>,
     #[serde(default, deserialize_with = "empty_string_as_none")]
-    pub name: Option<String>
+    pub name: Option<String>,
+    pub registration_conditions:bool,
 }
 fn empty_string_as_none<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
 where
@@ -62,7 +63,7 @@ pub fn match_role(string: &str) -> UserRola{
 }
 
 fn pepper_password(plain_password: &str) -> String {
-    println!("pepper passoword start!!!");
+    // println!("pepper passoword start!!!");
 
     let mut mac = HmacSha512::new_from_slice(get_pepper_key())
         .expect("SimpleHmac bez problemu poradzi sobie z każdą długością klucza");
@@ -71,7 +72,7 @@ fn pepper_password(plain_password: &str) -> String {
     let result = mac.finalize();
 
     let bbb = hex::encode(result.into_bytes());
-    println!("pepper passowrd end!!!");
+    // println!("pepper passowrd end!!!");
     bbb
 }
 

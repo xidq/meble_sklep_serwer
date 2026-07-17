@@ -118,7 +118,7 @@ mod tests {
         });
 
         let client = reqwest::Client::new();
-        let base_url = format!("http://{}", addr);
+        let base_url = format!("https://{}", addr);
 
         // TEST: Logowanie
         let login_res = client.post(format!("{}/usr/login", base_url))

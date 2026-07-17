@@ -1,5 +1,6 @@
 pub mod post;
 pub mod get;
+// mod ksef;
 
 use chrono::{Datelike, Local};
 use serde::{Deserialize, Serialize};
@@ -13,25 +14,48 @@ pub struct CaloscioweZamowienie{
 #[derive(Serialize, Deserialize, FromRow, Debug, Clone)]
 pub struct Zamowienie {
     pub id: i64,
-    pub user_id: Option<i64>,
     pub date: String,
     pub email: Option<String>,
     pub tel: Option<String>,
-
     #[serde(flatten)]
     pub lokacja: ZamowienieLokacja,
+
     #[serde(flatten)]
     pub faktura_dane: Option<ZamowienieFV>,
-
-    pub cena: f32,
+    #[serde(flatten)]
+    pub transport: Option<DaneTransportu>,
+    pub vat: f32, //kwota vat
     pub numer_fv: String,
     pub oplacone: bool,
+    pub cena: f32, //kwota netto
+    pub user_id: Option<i64>,
+    pub imie: String,
+    pub nazwisko: String,
 }
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ZamowienieLokacja {
     pub ulica: String,
     pub miasto: String,
     pub kod_pocztowy: String,
+}
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct DaneTransportu {
+    pub odleglosc_km: f32,
+    pub cena_netto: f32,
+    pub stawka_vat: f32,
+}
+impl DaneTransportu {
+    pub fn new(
+        odleglosc_km: f32,
+        cena_netto: f32,
+        stawka_vat: f32,
+    ) -> Self {
+        Self{
+            odleglosc_km,
+            cena_netto,
+            stawka_vat,
+        }
+    }
 }
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ZamowienieFV{
@@ -52,6 +76,7 @@ pub struct ZamowieniePozycja{
     pub product_id: i64,
     pub ilosc: i64,
     pub cena: f32,
+    pub vat: f32,
     pub konfiguracja: serde_json::Value,
 }
 #[derive(sqlx::FromRow)]
@@ -98,19 +123,27 @@ impl Zamowienie {
         tel: Option<impl Into <String>>,
         lokacja: ZamowienieLokacja,
         faktura_dane: Option<ZamowienieFV>,
+        transport: Option<DaneTransportu>,
+        imie: String,
+        nazwisko: String,
         cena: f32,
+        vat: f32,
         pool: &SqlitePool,
     ) -> Self{
 
         Self{
             id: 0,
             user_id,
+            imie,
+            nazwisko,
             date: chrono::Local::now().format("%Y-%m-%d | %H:%M:%S").to_string(),
             email: email.map(|e| e.into()),
             tel: tel.map(|t| t.into()),
             lokacja,
             faktura_dane,
-            cena,
+            transport,
+            cena, // kwota netto
+            vat,  // kwota vat
             numer_fv: generate_fv_number(pool).await.ok().unwrap_or_default(),
             oplacone: false,
         }

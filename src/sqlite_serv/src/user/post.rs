@@ -16,6 +16,7 @@ pub async fn handler_user_new(
     let email = payload.email;
     let email_ref = email.as_ref();
     let name = payload.name;
+    let conditions_accept: bool = payload.registration_conditions;
 
     // val loginu (Regex)
     let username_regex = Regex::new(r"^[a-zA-Z0-9_]{3,20}$").unwrap();
@@ -36,6 +37,10 @@ pub async fn handler_user_new(
     if !email_ref.is_some_and(|cc| cc.contains("@")) || email_ref.is_some_and(|xx| xx.len() < 5) {
         return (StatusCode::BAD_REQUEST, Json(serde_json::json!({"error": "Niepoprawny format emaila"}))).into_response();
     }
+    if !conditions_accept {
+        return (StatusCode::BAD_REQUEST, Json(serde_json::json!({"error": "Niepoprawny format emaila"}))).into_response();
+    }
+
 
     // pass val
     if password.len() < 8 || password.len() > 100 {

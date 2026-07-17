@@ -1,7 +1,7 @@
 use crate::auth::claims::Claims;
 use crate::auth::permissions::check_is_admin;
-use crate::AppState;
 use crate::user::User;
+use crate::AppState;
 use axum::extract::State;
 use axum::Json;
 use http::StatusCode;
@@ -83,7 +83,7 @@ pub async fn get_user_data_by_id(id: i64, pool: &SqlitePool) -> Result<User, sql
             id,
             username,
             name, /* Zgodnie z Twoją wcześniejszą logiką */
-            NULL AS email,    /* Jeśli nie ma tego w bazie */
+            email,    /* Jeśli nie ma tego w bazie */
             password_hash,
             permission,
         CASE WHEN valid = 'true' THEN 1 ELSE 0 END AS valid

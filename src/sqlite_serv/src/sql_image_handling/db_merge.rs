@@ -155,7 +155,7 @@ where
     let json_string = serde_json::to_string_pretty(json_data)?;
 
     let frontend_server = std::env::var("FRONTEND_SERVER")
-        .unwrap_or_else(|_| "http://localhost:8081/".to_string());
+        .unwrap_or_else(|_| "https://localhost:8444/".to_string());
 
     let serwer_adres = frontend_server.to_owned() + &target_path.get_localisation() + &modyfikator + "/" + &nazwa + ".json";
     // 3. Zamiast File::create -> wysyłamy to bezpośrednio do serwera POST-em
@@ -186,7 +186,7 @@ pub async fn przeslij_plik_graficzny_na_serwer(
         // Używamy bezpiecznego splitu po '/', żeby działało na każdym systemie
         let czysta_nazwa_pliku = xx.split('/').last().unwrap_or(&xx);
         let frontend_server = std::env::var("FRONTEND_SERVER")
-            .unwrap_or_else(|_| "http://localhost:8081/".to_string());
+            .unwrap_or_else(|_| "https://localhost:8444/".to_string());
         // 3. Budujemy poprawny adres URL (celujemy w serwer_dev/img/img_front/test_1/test_1_1_16.avif)
         let serwer_adres = format!(
             "{}{}{}/{}",

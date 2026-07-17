@@ -10,12 +10,13 @@ pub mod foto;
 pub mod model;
 pub mod zamowienia;
 pub mod auth;
-
+mod odleglosci_mapa;
 
 pub static PEPPER_KEY: OnceLock<String> = OnceLock::new();
 
 /// Path for folder with external files eg images.
 pub static FILES_LOCATION: OnceLock<String> = OnceLock::new();
+pub static FRONT_SERV_ADRESS: OnceLock<String> = OnceLock::new();
 
 #[derive(Clone)]
 pub struct AppState {

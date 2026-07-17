@@ -36,6 +36,6 @@ impl<'r> FromRow<'r, sqlx::sqlite::SqliteRow> for FotoData {
     }
 }
 pub fn get_items_prefix<'a>() -> &'a str {
-    println!("items prefix!!!");
-    FILES_LOCATION.get().expect("PEPPER_KEY nie jest zainicjalizowany")
+    // println!("items prefix!!!");
+    FILES_LOCATION.get().expect("FILES_LOCATION nie jest zainicjalizowany")
 }

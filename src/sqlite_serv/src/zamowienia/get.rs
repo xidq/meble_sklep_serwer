@@ -5,7 +5,7 @@ use sqlx::Row;
 use sqlx::sqlite::SqliteRow;
 use crate::auth::claims::Claims;
 use crate::AppState;
-use crate::zamowienia::{Zamowienie, ZamowienieFV, ZamowienieLokacja};
+use crate::zamowienia::{DaneTransportu, Zamowienie, ZamowienieFV, ZamowienieLokacja};
 
 pub async fn handler_get_user_orders(
     State(state): State<AppState>,
@@ -21,6 +21,8 @@ pub async fn handler_get_user_orders(
         Zamowienie {
             id: row.get("id"),
             user_id: row.get("user_id"),
+            imie: row.get("imie"),
+            nazwisko: row.get("nazwisko"),
             date: row.get("date"),
             email: row.get("email"),
             tel: row.get("tel"),
@@ -36,7 +38,13 @@ pub async fn handler_get_user_orders(
                 miasto: row.get("fv_miasto"),
                 kod_pocztowy: row.get("fv_kod_pocztowy"),
             }),
+            transport: row.get::<Option<f64>, _>("odleglosc_km").map(|odleglosc| DaneTransportu {
+                odleglosc_km: odleglosc as f32,
+                cena_netto: row.get::<f64, _>("cena_netto") as f32,
+                stawka_vat: row.get::<f64, _>("transport_stawka_vat") as f32,
+            }),
             cena: row.get::<f64, _>("cena") as f32,
+            vat: row.get::<f64, _>("vat") as f32,
             numer_fv: row.get("numer_fv"),
             oplacone: row.get::<i32, _>("oplacone") != 0,
         }

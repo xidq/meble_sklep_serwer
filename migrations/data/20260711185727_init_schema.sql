@@ -47,6 +47,8 @@ CREATE TABLE models (
 CREATE TABLE orders (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         user_id INTEGER, -- NULL = zakup jako gość
+                        imie TEXT NOT NULL,
+                        nazwisko TEXT NOT NULL,
                         date TEXT NOT NULL,
                         email TEXT,
                         tel TEXT,
@@ -63,7 +65,13 @@ CREATE TABLE orders (
                         fv_miasto TEXT,
                         fv_kod_pocztowy TEXT,
 
+    -- Pola ze spłaszczonej struktury DaneTransportu (NOWE całe)
+                        odleglosc_km REAL, --n
+                        cena_netto REAL,--n
+                        transport_stawka_vat REAL,--n
+
                         cena REAL NOT NULL,
+                        vat REAL NOT NULL DEFAULT 0.0, -- (NOWE)
                         numer_fv TEXT NOT NULL,
                         oplacone BOOLEAN NOT NULL DEFAULT 0,
 
@@ -77,6 +85,7 @@ CREATE TABLE orders_things (
                                product_id INTEGER NOT NULL,
                                ilosc INTEGER NOT NULL,
                                cena REAL NOT NULL, -- Zamrożona cena z dnia zakupu
+                               vat REAL NOT NULL DEFAULT 0.0, -- (NOWE) Stawka VAT dla konkretnej pozycji
                                konfiguracja TEXT, -- Serde json Value jako TEXT
 
                                FOREIGN KEY(zamowienie_id) REFERENCES orders(id) ON DELETE CASCADE,

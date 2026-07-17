@@ -1,14 +1,13 @@
-use std::sync::Arc;
+use crate::websoc::websocet;
 use axum::extract::DefaultBodyLimit;
-use axum::http::header::{AUTHORIZATION, CONTENT_TYPE};
-use axum::http::Method;
-use axum::Router;
 use axum::routing::{get, post, put};
+use axum::Router;
+use sqlite_serv::AppState;
+use std::sync::Arc;
 use tower_governor::governor::GovernorConfigBuilder;
+use tower_governor::key_extractor::SmartIpKeyExtractor;
 use tower_governor::GovernorLayer;
 use tower_http::cors::{Any, CorsLayer};
-use sqlite_serv::AppState;
-use crate::websoc::websocet;
 
 /// Function that handles routing from external server
 /// [GET, POST, PUT and DELETE]
@@ -16,21 +15,27 @@ pub fn build_router(state: AppState) -> Router {
 
     let cors = CorsLayer::new()
         .allow_origin(Any)
-        // .allow_methods(Any)
-        // .allow_headers(Any);
-        .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE])
-        .allow_headers([AUTHORIZATION, CONTENT_TYPE]);
+        .allow_methods(Any)
+        .allow_headers(Any);
+        // .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE])
+        // .allow_headers([AUTHORIZATION, CONTENT_TYPE]);
 
     let governor_conf = Arc::new(
         GovernorConfigBuilder::default()
+            .key_extractor(SmartIpKeyExtractor) // <-- tu
             .per_second(2)
             .burst_size(5)
+            // .use_headers()
             .finish()
             .unwrap()
     );
     let governor_layer = GovernorLayer::new(governor_conf);
     
     Router::new()
+        .route(
+            "/",
+            get(test)
+        )
         .route(
             "/usr/login",
             post(websocet::login_handler)
@@ -87,7 +92,7 @@ pub fn build_router(state: AppState) -> Router {
             get(sqlite_serv::model::upload::handler_model_upload_to_server)
         )
         .route(
-            "/ws",
+            "/wss",
             get(websocet::ws_handler)
         )
         .route(
@@ -96,7 +101,8 @@ pub fn build_router(state: AppState) -> Router {
         )
         .route(
             "/api/images/upload/{item_name_id}",
-            post(sqlite_serv::foto::upload::handler_image_upload_to_server))
+            post(sqlite_serv::foto::upload::handler_image_upload_to_server)
+        )
         .layer(DefaultBodyLimit::max(10 * 1024 * 1024))
         // rate limiter jest na innym serwerze, a komunikacja pomiędzy serwerami fajnie jakby była nie ograniczona
         // rate-limiter
@@ -104,4 +110,8 @@ pub fn build_router(state: AppState) -> Router {
         .layer(cors)
         .with_state(state)
 
+}
+
+async fn test() -> &'static str {
+    "no siema"
 }

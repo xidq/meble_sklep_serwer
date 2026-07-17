@@ -8,18 +8,21 @@ pub static JWT_SECRET: OnceLock<Vec<u8>> = OnceLock::new();
 
 
 pub fn extract_and_verify_jwt(headers: &HeaderMap) -> Result<Claims, StatusCode> {
-
+println!("Extracting JWT");
     let auth_header = headers
         .get("Authorization")
         .and_then(|h| h.to_str().ok())
         .ok_or(StatusCode::UNAUTHORIZED)?; // Brak nagłówka err401
 
-
+    println!("Auth header: {:?}", auth_header);
     if !auth_header.starts_with("Bearer ") {
+        println!("auth_header.starts_with nie zaczyna sie Bearer");
         return Err(StatusCode::BAD_REQUEST); // Zły format nagłówka err400
     }
 
     let token = &auth_header[7..];
+
+    println!("Auth token: {:?}", token);
 
     // Dekodowanie i krypto ver podpisu i czasu ważności
     decode::<Claims>(
@@ -36,18 +39,18 @@ pub fn extract_and_verify_jwt(headers: &HeaderMap) -> Result<Claims, StatusCode>
 /// For debug|tests is taken from env file
 pub fn initialize_jwt_secret() {
     // losowy klucz przy każdym starcie
-    #[cfg(not(debug_assertions))]
-    {
-        use rand::Rng;
-        let mut dynamic_key = [0u8; 32];
-        rand::rng().fill(&mut dynamic_key);
-
-        JWT_SECRET.set(dynamic_key.to_vec()).expect("Błąd inicjalizacji klucza (release)");
-        println!("RELEASE: Wygenerowano losowy klucz JWT.");
-    }
-
-    // ładowany z konfiguracji
-    #[cfg(debug_assertions)]
+    // #[cfg(not(debug_assertions))]
+    // {
+    //     use rand::Rng;
+    //     let mut dynamic_key = [0u8; 32];
+    //     rand::rng().fill(&mut dynamic_key);
+    //
+    //     JWT_SECRET.set(dynamic_key.to_vec()).expect("Błąd inicjalizacji klucza (release)");
+    //     println!("RELEASE: Wygenerowano losowy klucz JWT.");
+    // }
+    //
+    // // ładowany z konfiguracji
+    // #[cfg(debug_assertions)]
     {
         let secret = std::env::var("JWT_SECRET_KEY")
             .expect("W trybie debug zmienna JWT_SECRET_KEY jest wymagana!");

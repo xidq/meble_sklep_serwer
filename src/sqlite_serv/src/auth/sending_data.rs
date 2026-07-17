@@ -27,7 +27,7 @@ pub async fn files_send_to_server(
         .build()
         .map_err(|e| format!("Błąd budowania klienta: {}", e))?;
     let frontend_server = std::env::var("FRONTEND_SERVER")
-        .unwrap_or_else(|_| "http://localhost:8081/".to_string());
+        .unwrap_or_else(|_| "https://localhost:8444/".to_string());
 
     let serwer_adres = format!("{}api/produkty/{}", frontend_server, modyfikator);
     println!("będę wysyłał na adres: {}", serwer_adres);
@@ -94,7 +94,7 @@ pub async fn json_send_to_server(
         .build()
         .map_err(|e| format!("Błąd budowania klienta: {}", e))?;
     let frontend_server = std::env::var("FRONTEND_SERVER")
-        .unwrap_or_else(|_| "http://localhost:8081/".to_string());
+        .unwrap_or_else(|_| "https://localhost:8444/".to_string());
 
     // Używamy endpointu, który w Node.js obsługuje JSON-a i wywołuje rebuildRouterJson()
     let serwer_adres = format!("{}api/upload/json/{}/{}", frontend_server, typ.str(), modyfikator);

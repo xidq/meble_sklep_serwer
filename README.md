@@ -111,7 +111,7 @@ A `.env` file in the project root is required. Example:
 DATABASE_URL=sqlite://data/data.db
 JWT_SECRET_KEY=your_secret_key_at_least_32_bytes
 FILES_URL=src/api/
-FRONTEND_SERVER=http://localhost:3000
+FRONTEND_SERVER=https://localhost:3000
 PEPPER_KEY=your_password_hash_pepper
 USERS_DB_ENCRYPTION_KEY=your_sqlcipher_db_key
 ```
