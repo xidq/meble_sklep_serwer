@@ -1,6 +1,6 @@
 use crate::auth::claims::Claims;
 use crate::auth::permissions::check_is_admin;
-use crate::user::User;
+use crate::user::{User, UserData};
 use crate::AppState;
 use axum::extract::State;
 use axum::Json;
@@ -76,14 +76,28 @@ pub async fn handler_get_user_own_data(
     // Jeśli wszystko poszło dobrze, zwracamy status 200 i listę zapakowaną w JSON
     Ok((StatusCode::OK, Json(user_data)))
 }
+pub async fn handler_get_user_profile(
+    State(state): State<AppState>,
+    claims: Claims,
+) -> Result<(StatusCode, Json<UserData>), (StatusCode, String)> {
+
+    let user_data = sqlx::query_as::<_, UserData>(
+        "SELECT username, email, name, surname FROM users_data WHERE username = ?"
+    )
+        .bind(&claims.username)
+        .fetch_one(&state.db) // 2. Referencja do bazy (&)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?; // 3. Obsługa błędu
+
+    // 4. Poprawne zwrócenie krotki
+    Ok((StatusCode::OK, Json(user_data)))
+}
 pub async fn get_user_data_by_id(id: i64, pool: &SqlitePool) -> Result<User, sqlx::Error> {
 
     let user = sqlx::query_as::<_, User>(
         "SELECT
             id,
             username,
-            name, /* Zgodnie z Twoją wcześniejszą logiką */
-            email,    /* Jeśli nie ma tego w bazie */
             password_hash,
             permission,
         CASE WHEN valid = 'true' THEN 1 ELSE 0 END AS valid

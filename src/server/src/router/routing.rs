@@ -52,11 +52,28 @@ pub fn build_router(state: AppState) -> Router {
             get(sqlite_serv::zamowienia::get::handler_get_user_orders)
         )
         .route(
+            // "usr/{name_id}/data",
+            "usr/self/data",
+            get(sqlite_serv::user::get::handler_get_user_profile) // todo!("ogarnąć rozpiździel w handlerach")
+        )
+        .route(
             "/admin/usr",
             post(sqlite_serv::user::post::handler_user_new)
                 .put(sqlite_serv::user::put::handle_edit_user)
                 .get(sqlite_serv::user::get::handler_user_get_list)
         )
+        .route(
+            "/admin/orders",
+            // post(sqlite_serv::user::post::handler_user_new)
+            //     put(sqlite_serv::zamowienia::put::handle_admin_edit_orders)
+                get(sqlite_serv::zamowienia::get::handler_admin_get_order_lists)
+        )
+        // .route(
+        //     "/admin/orders/{order_id}",
+            // post(sqlite_serv::user::post::handler_user_new)
+            //put(sqlite_serv::zamowienia::put::handle_admin_edit_orders) todo!()
+                // .get(sqlite_serv::zamowienia::get::handler_admin_get_order_lists)
+        // )
         .route(
             "/admin/usr/{id}",
             get(sqlite_serv::user::get::handler_get_user_data_by_id) //get user data

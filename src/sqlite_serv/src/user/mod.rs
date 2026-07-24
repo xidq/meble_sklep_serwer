@@ -42,6 +42,13 @@ pub struct User{
     pub permission: UserRola,
     pub valid: bool,
 }
+#[derive(Clone, Serialize, Deserialize, FromRow, Debug)]
+pub struct UserData{
+    pub username: String,
+    pub name: Option<String>,
+    pub surname: Option<String>,
+    pub email: Option<String>,
+}
 #[derive(Serialize, Deserialize, Debug, Clone, Display, PartialEq)]
 #[derive(sqlx::Type)]
 #[sqlx(rename_all = "PascalCase")]

@@ -1,5 +1,6 @@
 pub mod post;
 pub mod get;
+// mod put;
 // mod ksef;
 
 use chrono::{Datelike, Local};
@@ -10,6 +11,16 @@ use sqlx::{FromRow, SqlitePool};
 pub struct CaloscioweZamowienie{
     dane: Zamowienie,
     przedmioty: Vec<ZamowieniePozycja>,
+}
+#[derive(Serialize, Deserialize, Debug, Clone)]
+
+pub struct AdminZamowieniaListView {
+    id: i64,
+    user_id: i64,
+    date: String,
+    cena: f32,
+    numer_fv: String,
+    oplacone: bool,
 }
 #[derive(Serialize, Deserialize, FromRow, Debug, Clone)]
 pub struct Zamowienie {

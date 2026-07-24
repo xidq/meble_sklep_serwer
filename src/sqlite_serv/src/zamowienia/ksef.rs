@@ -36,15 +36,15 @@ pub async fn generate_ksef_xml(
         let product = get_products_data_by_id(poz.product_id, pool).await?;
 
         wiersze_xml.push_str(&format!(
-            r#"<FaWiersz>
-            <NrWierszaFa>{}</NrWierszaFa>
-            <P_7>{}</P_7>
-            <P_8A>szt.</P_8A>
-            <P_8B>{}</P_8B>
-            <P_9A>{:.2}</P_9A>
-            <P_11>{:.2}</P_11>
-            <P_12>{:.0}</P_12>
-        </FaWiersz>"#,
+r#"<FaWiersz>
+<NrWierszaFa>{}</NrWierszaFa>
+    <P_7>{}</P_7>
+    <P_8A>szt.</P_8A>
+    <P_8B>{}</P_8B>
+    <P_9A>{:.2}</P_9A>
+    <P_11>{:.2}</P_11>
+    <P_12>{:.0}</P_12>
+</FaWiersz>"#,
             i + 1, product.name_pl, poz.ilosc, poz.cena, poz.cena * poz.ilosc as f32, poz.vat
         ));
     }

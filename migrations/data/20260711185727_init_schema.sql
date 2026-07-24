@@ -1,6 +1,6 @@
 -- Add migration script here
 
--- 1. Tabela Użytkowników
+-- Tabela Użytkowników
 CREATE TABLE users (
                        id INTEGER PRIMARY KEY AUTOINCREMENT,
                        username TEXT NOT NULL UNIQUE,
@@ -11,7 +11,7 @@ CREATE TABLE users (
                        valid BOOLEAN NOT NULL DEFAULT 0
 );
 
--- 2. Tabela Produktów
+-- Tabela Produktów
 CREATE TABLE products (
                           id INTEGER PRIMARY KEY AUTOINCREMENT,
                           name_id TEXT NOT NULL UNIQUE,
@@ -28,14 +28,14 @@ CREATE TABLE products (
                           depth REAL
 );
 
--- 3. Tabela Multimediów (Zdjęcia) - pod Twój BTreeMap z Rust
+-- Tabela Multimediów (Zdjęcia) - pod Twój BTreeMap z Rust
 CREATE TABLE images (
                         product_id INTEGER PRIMARY KEY,
                         warianty_zdjec TEXT NOT NULL, -- Tutaj leci zrzutowany JSON z rozdzielczościami
                         FOREIGN KEY(product_id) REFERENCES products(id) ON DELETE CASCADE
 );
 
--- 4. Tabela Modeli 3D - pod Twoją strukturę Model z LODami
+-- Tabela Modeli 3D - pod Twoją strukturę Model z LODami
 CREATE TABLE models (
                         product_id INTEGER PRIMARY KEY,
                         texture_ao TEXT, -- Usunięto UNIQUE, żeby brak tekstury (NULL) nie blokował bazy
@@ -43,7 +43,7 @@ CREATE TABLE models (
                         FOREIGN KEY(product_id) REFERENCES products(id) ON DELETE CASCADE
 );
 
--- 5. Tabela Zamówień (Nagłówek spłaszczony przez serde flatten)
+-- Tabela Zamówień (Nagłówek spłaszczony przez serde flatten)
 CREATE TABLE orders (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         user_id INTEGER, -- NULL = zakup jako gość
@@ -78,7 +78,7 @@ CREATE TABLE orders (
                         FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
--- 6. Tabela Pozycji Zamówienia
+-- Tabela Pozycji Zamówienia
 CREATE TABLE orders_things (
                                id INTEGER PRIMARY KEY AUTOINCREMENT, -- SQLite lubi mieć jednoznaczne ID dla każdego wiersza
                                zamowienie_id INTEGER NOT NULL,

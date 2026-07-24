@@ -5,7 +5,8 @@ use sqlx::Row;
 use sqlx::sqlite::SqliteRow;
 use crate::auth::claims::Claims;
 use crate::AppState;
-use crate::zamowienia::{DaneTransportu, Zamowienie, ZamowienieFV, ZamowienieLokacja};
+use crate::auth::permissions::check_is_admin;
+use crate::zamowienia::{AdminZamowieniaListView, DaneTransportu, Zamowienie, ZamowienieFV, ZamowienieLokacja};
 
 pub async fn handler_get_user_orders(
     State(state): State<AppState>,
@@ -45,6 +46,34 @@ pub async fn handler_get_user_orders(
             }),
             cena: row.get::<f64, _>("cena") as f32,
             vat: row.get::<f64, _>("vat") as f32,
+            numer_fv: row.get("numer_fv"),
+            oplacone: row.get::<i32, _>("oplacone") != 0,
+        }
+    }).collect();
+
+    Ok(Json(orders))
+}
+
+
+pub async fn handler_admin_get_order_lists(
+    State(state): State<AppState>,
+    claims: Claims,
+) -> Result<Json<Vec<AdminZamowieniaListView>>, (StatusCode, String)> {
+
+    check_is_admin(&claims)?;
+    
+    let rows = sqlx::query("SELECT id, user_id, date, cena, numer_fv, oplacone FROM orders")
+        .bind(claims.sub)
+        .fetch_all(&state.db)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    let orders = rows.into_iter().map(|row: SqliteRow| {
+        AdminZamowieniaListView {
+            id: row.get("id"),
+            user_id: row.get("user_id"),
+            date: row.get("date"),
+            cena: row.get::<f64, _>("cena") as f32,
             numer_fv: row.get("numer_fv"),
             oplacone: row.get::<i32, _>("oplacone") != 0,
         }
