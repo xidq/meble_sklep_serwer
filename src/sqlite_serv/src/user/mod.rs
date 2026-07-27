@@ -29,16 +29,39 @@ where
     let opt: Option<String> = Option::deserialize(deserializer)?;
     Ok(opt.filter(|s| !s.trim().is_empty()))
 }
+#[derive(Deserialize)]
+pub struct PasswordChange{
+    pub old_password: String,
+    pub new_password: String,
+}
 #[derive(Clone, Serialize, Deserialize, FromRow, Debug)]
 pub struct User{
     pub id: i64,
     pub username: String,
     pub name: Option<String>,
+    pub surname: Option<String>,
     pub email: Option<String>,
 
     #[serde(skip_serializing)]
     pub password_hash: String, //hash z salt i pepper itd...
 
+    pub permission: UserRola,
+    pub valid: bool,
+}
+#[derive(Clone, Serialize, Deserialize, FromRow, Debug)]
+pub struct UserList{
+    pub id: i64,
+    pub username: String,
+    pub permission: UserRola,
+    pub valid: bool,
+}
+#[derive(Clone, Serialize, Deserialize, FromRow, Debug)]
+pub struct Logowanie{
+    pub id: i64,
+    pub username: String,
+    pub name: Option<String>,
+    pub surname: Option<String>,
+    pub email: Option<String>,
     pub permission: UserRola,
     pub valid: bool,
 }
@@ -92,6 +115,7 @@ impl User {
     pub fn new(
         username: impl Into<String>,
         name: Option<String>,
+        surname: Option<String>,
         email: Option<String>,
         password: impl Into<String>,
     ) -> Result<Self, bcrypt::BcryptError> {
@@ -104,6 +128,7 @@ impl User {
             id: 0, // nadpisywane przez db
             username: username.into(),
             name,
+            surname,
             email,
             password_hash,
             permission: UserRola::User,

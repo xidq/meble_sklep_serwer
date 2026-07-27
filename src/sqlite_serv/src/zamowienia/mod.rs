@@ -6,24 +6,92 @@ pub mod get;
 use chrono::{Datelike, Local};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, SqlitePool};
+use strum::Display;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct CaloscioweZamowienie{
-    dane: Zamowienie,
-    przedmioty: Vec<ZamowieniePozycja>,
+pub struct CaloscioweZamowienie<T>{
+    dane: Zamowienie<T>,
+    przedmioty: Vec<ZamowieniePozycja<T>>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Pieniadze{
+    dziesiatki: i64,
+    grosze: u8,
+    waluta: Waluta,
+}
+
+impl Pieniadze {
+    pub fn new(kwota: f64, waluta: Waluta) -> Pieniadze {
+
+        // let rewaloryzacja = kwota * waluta.get_multi();
+        // Zabezpieczenie przed ujemnymi wartościami lub NaN można obsłużyć według uznania
+        let calkowite = kwota.trunc() as i64;
+        // Mnożymy przez 100 i bierzemy resztę z dzielenia, aby uzyskać grosze
+        let grosze = (kwota.fract() * 100.0).abs().round() as u8;
+
+        Pieniadze {
+            dziesiatki: calkowite,
+            grosze,
+            waluta,
+        }
+    }
+    pub fn to_float(&self) -> f64 {
+        self.dziesiatki as f64 + (self.grosze as f64 / 100.)
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+pub enum Waluta{
+    Pln,
+    Eur,
+    Dol
+}
+impl Waluta{
+    pub fn get_multi(&self) -> f64 {
+        match self {
+            Self::Pln => 1.0,
+            Self::Eur => 4.30,
+            Self::Dol => 3.97
+        }
+    }
+    pub fn get_name(&self) -> &'static str {
+        match self {
+            Self::Pln => "pln",
+            Self::Eur => "eur",
+            Self::Dol => "dol"
+        }
+    }
+}
+#[derive(Serialize, Deserialize, Debug, Clone, Display, sqlx::Type)]
+#[sqlx(type_name = "TEXT")]
+pub enum StatusOplacenia{
+    Nieoplacone,
+    Czesciowo,
+    Oplacone,
+    Zwrot
+}
+#[derive(Serialize, Deserialize, Debug, Clone, Display, sqlx::Type)]
+#[sqlx(type_name = "TEXT")]
+pub enum StatusZamowienia{
+    ZamowieniePrzyjete,
+    Wprzygotowaniu,
+    OczekujeNaWysylke,
+    Wpodrozy,
+    Dostarczone
 }
 #[derive(Serialize, Deserialize, Debug, Clone)]
-
 pub struct AdminZamowieniaListView {
     id: i64,
     user_id: i64,
     date: String,
-    cena: f32,
+    cena: f64,
     numer_fv: String,
-    oplacone: bool,
+    oplacone: StatusOplacenia,
+    status: StatusZamowienia
 }
 #[derive(Serialize, Deserialize, FromRow, Debug, Clone)]
-pub struct Zamowienie {
+pub struct Zamowienie<T> {
     pub id: i64,
     pub date: String,
     pub email: Option<String>,
@@ -35,10 +103,11 @@ pub struct Zamowienie {
     pub faktura_dane: Option<ZamowienieFV>,
     #[serde(flatten)]
     pub transport: Option<DaneTransportu>,
-    pub vat: f32, //kwota vat
+    pub vat: T, //kwota vat
     pub numer_fv: String,
-    pub oplacone: bool,
-    pub cena: f32, //kwota netto
+    pub oplacone: StatusOplacenia,
+    pub status: StatusZamowienia,
+    pub cena: T, //kwota netto
     pub user_id: Option<i64>,
     pub imie: String,
     pub nazwisko: String,
@@ -51,15 +120,15 @@ pub struct ZamowienieLokacja {
 }
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct DaneTransportu {
-    pub odleglosc_km: f32,
-    pub cena_netto: f32,
-    pub stawka_vat: f32,
+    pub odleglosc_km: f64,
+    pub cena_netto: f64,
+    pub stawka_vat: f64,
 }
 impl DaneTransportu {
     pub fn new(
-        odleglosc_km: f32,
-        cena_netto: f32,
-        stawka_vat: f32,
+        odleglosc_km: f64,
+        cena_netto: f64,
+        stawka_vat: f64,
     ) -> Self {
         Self{
             odleglosc_km,
@@ -81,13 +150,13 @@ pub struct ZamowienieFV{
 }
 
 #[derive(Serialize, Deserialize, FromRow, Debug, Clone)]
-pub struct ZamowieniePozycja{
+pub struct ZamowieniePozycja<T>{
     #[serde(skip_deserializing)]
     pub zamowienie_id: i64, //id z Zamowienie
     pub product_id: i64,
     pub ilosc: i64,
-    pub cena: f32,
-    pub vat: f32,
+    pub cena: T,
+    pub vat: T,
     pub konfiguracja: serde_json::Value,
 }
 #[derive(sqlx::FromRow)]
@@ -127,7 +196,7 @@ async fn get_last_order_number(pool: &SqlitePool) -> Result<Option<LastOrderData
         .fetch_optional(pool)
         .await
 }
-impl Zamowienie {
+impl Zamowienie<Pieniadze> {
     pub async fn new(
         user_id: Option<i64>,
         email: Option<impl Into <String>>,
@@ -137,8 +206,8 @@ impl Zamowienie {
         transport: Option<DaneTransportu>,
         imie: String,
         nazwisko: String,
-        cena: f32,
-        vat: f32,
+        cena: Pieniadze,
+        vat: Pieniadze,
         pool: &SqlitePool,
     ) -> Self{
 
@@ -156,7 +225,8 @@ impl Zamowienie {
             cena, // kwota netto
             vat,  // kwota vat
             numer_fv: generate_fv_number(pool).await.ok().unwrap_or_default(),
-            oplacone: false,
+            oplacone: StatusOplacenia::Nieoplacone,
+            status: StatusZamowienia::ZamowieniePrzyjete,
         }
     }
 }

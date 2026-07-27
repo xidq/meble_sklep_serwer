@@ -43,40 +43,34 @@ pub fn build_router(state: AppState) -> Router {
         .route(
             "/usr/usr",
             post(sqlite_serv::user::post::handler_user_new)
-                .get(sqlite_serv::user::get::handler_get_user_own_data)
-                .delete(sqlite_serv::user::delete::handler_delete_user_by_user)
-                .put(sqlite_serv::user::put::handle_edit_user_by_user)
         )
         .route(
-            "/api/user/orders",
+            "/usr/self/orders",
             get(sqlite_serv::zamowienia::get::handler_get_user_orders)
         )
         .route(
-            // "usr/{name_id}/data",
-            "usr/self/data",
+            "/usr/self/password",
+            put(sqlite_serv::user::put::handler_edit_user_password)
+        )
+        .route(
+            "/usr/self/data",
             get(sqlite_serv::user::get::handler_get_user_profile) // todo!("ogarnąć rozpiździel w handlerach")
+                .put(sqlite_serv::user::put::handler_edit_user_profile)
+                .delete(sqlite_serv::user::delete::handler_delete_user_profile)
         )
         .route(
             "/admin/usr",
             post(sqlite_serv::user::post::handler_user_new)
-                .put(sqlite_serv::user::put::handle_edit_user)
+                .put(sqlite_serv::user::put::handle_admin_edit_user_data)
                 .get(sqlite_serv::user::get::handler_user_get_list)
         )
         .route(
             "/admin/orders",
-            // post(sqlite_serv::user::post::handler_user_new)
-            //     put(sqlite_serv::zamowienia::put::handle_admin_edit_orders)
                 get(sqlite_serv::zamowienia::get::handler_admin_get_order_lists)
         )
-        // .route(
-        //     "/admin/orders/{order_id}",
-            // post(sqlite_serv::user::post::handler_user_new)
-            //put(sqlite_serv::zamowienia::put::handle_admin_edit_orders) todo!()
-                // .get(sqlite_serv::zamowienia::get::handler_admin_get_order_lists)
-        // )
         .route(
-            "/admin/usr/{id}",
-            get(sqlite_serv::user::get::handler_get_user_data_by_id) //get user data
+            "/admin/usr/{name_id}",
+            get(sqlite_serv::user::get::handler_get_user_data_by_nameid) //get user data
                 .delete(sqlite_serv::user::delete::handler_delete_user_by_id)
             // .put(sqlite_serv::user::put::handle_edit_user) //nie trza id, jest caly user
             // .delete(sqlite_serv::user::delete::handler_delete_user_by_id)
@@ -110,7 +104,7 @@ pub fn build_router(state: AppState) -> Router {
         )
         .route(
             "/wss",
-            get(websocet::ws_handler)
+            get(websocet::wss_handler)
         )
         .route(
             "/api/order",

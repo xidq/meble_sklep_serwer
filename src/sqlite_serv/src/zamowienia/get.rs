@@ -6,12 +6,12 @@ use sqlx::sqlite::SqliteRow;
 use crate::auth::claims::Claims;
 use crate::AppState;
 use crate::auth::permissions::check_is_admin;
-use crate::zamowienia::{AdminZamowieniaListView, DaneTransportu, Zamowienie, ZamowienieFV, ZamowienieLokacja};
+use crate::zamowienia::{AdminZamowieniaListView, DaneTransportu, StatusZamowienia, Zamowienie, ZamowienieFV, ZamowienieLokacja};
 
 pub async fn handler_get_user_orders(
     State(state): State<AppState>,
-    claims: Claims, // Pobieramy ID zalogowanego użytkownika
-) -> Result<Json<Vec<Zamowienie>>, (StatusCode, String)> {
+    claims: Claims,
+) -> Result<Json<Vec<Zamowienie<f64>>>, (StatusCode, String)> {
     let rows = sqlx::query("SELECT * FROM orders WHERE user_id = ?")
         .bind(claims.sub)
         .fetch_all(&state.db)
@@ -40,14 +40,25 @@ pub async fn handler_get_user_orders(
                 kod_pocztowy: row.get("fv_kod_pocztowy"),
             }),
             transport: row.get::<Option<f64>, _>("odleglosc_km").map(|odleglosc| DaneTransportu {
-                odleglosc_km: odleglosc as f32,
-                cena_netto: row.get::<f64, _>("cena_netto") as f32,
-                stawka_vat: row.get::<f64, _>("transport_stawka_vat") as f32,
+                odleglosc_km: odleglosc,
+                cena_netto: row.get::<f64, _>("cena_netto"),
+                stawka_vat: row.get::<f64, _>("transport_stawka_vat"),
             }),
-            cena: row.get::<f64, _>("cena") as f32,
-            vat: row.get::<f64, _>("vat") as f32,
+            cena: { 
+                let dziesiatki = row.get::<i64, _>("cena_dziesiatki"); 
+                let jednosci = row.get::<i64, _>("cena_grosze");
+                let wyjscie = dziesiatki as f64 + (jednosci as f64 / 100.);
+                wyjscie
+            },
+            vat: {
+                let dziesiatki = row.get::<i64, _>("vat_dziesiatki");
+                let jednosci = row.get::<i64, _>("vat_grosze");
+                let wyjscie = dziesiatki as f64 + (jednosci as f64 / 100.);
+                wyjscie
+            },
             numer_fv: row.get("numer_fv"),
-            oplacone: row.get::<i32, _>("oplacone") != 0,
+            oplacone: row.get("oplacone"),
+            status: row.get("status"),
         }
     }).collect();
 
@@ -62,8 +73,8 @@ pub async fn handler_admin_get_order_lists(
 
     check_is_admin(&claims)?;
     
-    let rows = sqlx::query("SELECT id, user_id, date, cena, numer_fv, oplacone FROM orders")
-        .bind(claims.sub)
+    let rows = sqlx::query("SELECT id, user_id, date, cena_dziesiatki, cena_grosze, numer_fv, oplacone FROM orders")
+        // .bind(claims.sub)
         .fetch_all(&state.db)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -73,9 +84,15 @@ pub async fn handler_admin_get_order_lists(
             id: row.get("id"),
             user_id: row.get("user_id"),
             date: row.get("date"),
-            cena: row.get::<f64, _>("cena") as f32,
+            cena: {
+                let dziesiatki = row.get::<i64, _>("cena_dziesiatki");
+                let jednosci = row.get::<i64, _>("cena_grosze");
+                let wyjscie = dziesiatki as f64 + (jednosci as f64 / 100.);
+                wyjscie
+            },
             numer_fv: row.get("numer_fv"),
-            oplacone: row.get::<i32, _>("oplacone") != 0,
+            oplacone: row.get("oplacone"),
+            status: row.get("status"),
         }
     }).collect();
 

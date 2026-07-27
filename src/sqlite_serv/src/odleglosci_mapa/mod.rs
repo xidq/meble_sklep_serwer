@@ -89,7 +89,7 @@ pub async fn oblicz_odleglosc_do_klienta(
         .ok_or_else(|| anyhow!("Nie udało się wyznaczyć trasy drogowej do podanego adresu"))?;
 
     // Przeliczamy metry na kilometry i zaokrąglamy do 1 miejsca po przecinku (np. 12.4 km)
-    let odleglosc_km = (route.distance / 1000.0) as f32;
+    let odleglosc_km = (route.distance / 1000.0);
     let odleglosc_km_zaokr = (odleglosc_km * 10.0).round() / 10.0;
 
     let spalanie_na_100km = 12.5;

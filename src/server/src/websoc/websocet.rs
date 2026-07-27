@@ -14,7 +14,7 @@ use sqlite_serv::product::get::get_products_list;
 use sqlite_serv::AppState;
 use sqlite_serv::user::get::get_user_by_username;
 
-pub async fn ws_handler(
+pub async fn wss_handler(
     ws: WebSocketUpgrade,
     State(state): State<AppState>,
     // claims: Claims,

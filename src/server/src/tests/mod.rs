@@ -92,6 +92,7 @@ mod tests {
             "admin_jan",
             None,
             None,
+            None,
             "tajne_haslo_123"
         ).expect("Błąd tworzenia użytkownika w teście");
 

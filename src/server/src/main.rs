@@ -12,6 +12,7 @@ use sqlite_serv::{FILES_LOCATION, PEPPER_KEY};
 use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions};
 use std::net::SocketAddr;
 use std::str::FromStr;
+use tokio::io::AsyncBufReadExt;
 use tokio::sync::broadcast;
 
 /// Main fn of such server
@@ -84,9 +85,48 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
     println!("Serwer działa na https://{}", addr);
 
 
-    axum_server::bind_rustls(addr, config)
-        // ta fn po app to bo https nie będzie współpracował z rate limiterem
-        .serve(app.into_make_service_with_connect_info::<SocketAddr>())
-        .await?;
+    // axum_server::bind_rustls(addr, config)
+    //     // ta fn po app to bo https nie będzie współpracował z rate limiterem
+    //     .serve(app.into_make_service_with_connect_info::<SocketAddr>())
+    //     .await?;
+    // Ok(())
+
+    // ---------------------------------------------------------------
+    println!("Wpisz 'exit' lub naciśnij Ctrl+C, aby wyłączyć serwer.");
+
+    // Zadanie nasłuchujące na konsolę (wpisanie 'exit' lub 'stop')
+    let stdin_future = async {
+        let stdin = tokio::io::stdin();
+        let reader = tokio::io::BufReader::new(stdin);
+        let mut lines = reader.lines();
+
+        while let Ok(Some(line)) = lines.next_line().await {
+            let trimmed = line.trim();
+            if trimmed.eq_ignore_ascii_case("exit") || trimmed.eq_ignore_ascii_case("stop") {
+                println!("Otrzymano komendę z konsoli. Zamykanie serwera...");
+                break;
+            } else {
+                println!("Nieznana komenda: '{}'. Wpisz 'exit', aby wyłączyć.", trimmed);
+            }
+        }
+    };
+
+    // Zadanie nasłuchujące na Ctrl+C
+    let ctrl_c_future = async {
+        tokio::signal::ctrl_c().await.expect("Nie udało się nasłuchiwać sygnału Ctrl+C");
+        println!("\nOtrzymano sygnał Ctrl+C. Zamykanie serwera...");
+    };
+
+    // Odpalamy serwer axum w tle, a główne wątki/future pilnują sygnału zamknięcia
+    let server_future = axum_server::bind_rustls(addr, config)
+        .serve(app.into_make_service_with_connect_info::<SocketAddr>());
+
+    tokio::select! {
+        _ = server_future => {}
+        _ = stdin_future => {}
+        _ = ctrl_c_future => {}
+    }
+
+    println!("Serwer został całkowicie wyłączony.");
     Ok(())
 }

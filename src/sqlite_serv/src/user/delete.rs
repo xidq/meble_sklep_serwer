@@ -1,8 +1,10 @@
 use axum::extract::State;
+use axum::Json;
 use http::StatusCode;
 use sqlx::SqlitePool;
 use crate::auth::claims::Claims;
 use crate::AppState;
+use crate::user::UserData;
 
 pub async fn handler_delete_user_by_user(
     State(state): State<AppState>,
@@ -25,6 +27,39 @@ pub async fn handler_delete_user_by_user(
     }
 
     Ok(StatusCode::NO_CONTENT)
+}
+
+pub async fn handler_delete_user_profile(
+    State(state): State<AppState>,
+    claims: Claims,
+) -> Result<StatusCode, (StatusCode, String)> {
+
+    // Rozpoczynamy transakcję w bazie
+    let mut tx = state.db
+        .begin()
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    // Najpierw czyścimy users_data
+    sqlx::query("DELETE FROM users_data WHERE username = ?")
+        .bind(&claims.username)
+        .execute(&mut *tx) // Wykonujemy wewnątrz transakcji (*tx)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    // Potem usuwamy główne konto z users
+    sqlx::query("DELETE FROM users WHERE username = ?")
+        .bind(&claims.username)
+        .execute(&mut *tx)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    // Zatwierdzamy transakcję - dopiero teraz zmiany zapisują się w bazie
+    tx.commit()
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+
+    Ok(StatusCode::NO_CONTENT) // 204 No Content to standard RESTowy dla udanego DELETE
 }
 pub async fn handler_delete_user_by_id(
     State(state): State<AppState>,
