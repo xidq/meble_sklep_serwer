@@ -109,7 +109,7 @@ pub async fn put_order_new(
             odleglosc_km, cena_netto, transport_stawka_vat,
             cena_dziesiatki,cena_grosze, vat_dziesiatki, vat_grosze, waluta, numer_fv, oplacone, status
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"#
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"#
     )
         .bind(new_order.user_id)
         .bind(&new_order.date)
