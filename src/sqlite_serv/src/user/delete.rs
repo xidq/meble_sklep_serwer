@@ -1,10 +1,8 @@
-use axum::extract::State;
-use axum::Json;
-use http::StatusCode;
-use sqlx::SqlitePool;
 use crate::auth::claims::Claims;
 use crate::AppState;
-use crate::user::UserData;
+use axum::extract::State;
+use http::StatusCode;
+use sqlx::SqlitePool;
 
 pub async fn handler_delete_user_by_user(
     State(state): State<AppState>,

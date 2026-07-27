@@ -10,7 +10,7 @@ The server is responsible for core business logic, secure data persistence, fina
 
 ## Architecture & Key Capabilities
 
-- **HTTP & WebSocket Engine** – Built on Axum 0.8 and Tokio. Provides REST endpoints and real-time WebSocket communication.
+- **HTTPS & WebSocket Engine** – Built on Axum 0.8 and Tokio. Provides REST endpoints and real-time WebSocket communication.
 - **Three-Tier Authorization** – Enforces the final, most granular security and business-rule checks, serving as the ultimate access-control point behind the JS frontend and the Go intermediary.
 - **Dual SQLite Storage**
     - `rusqlite` (with `bundled-sqlcipher`) handles encrypted database operations.

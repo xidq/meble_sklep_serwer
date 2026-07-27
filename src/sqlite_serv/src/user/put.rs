@@ -1,12 +1,11 @@
 use crate::auth::claims::Claims;
-use crate::auth::permissions::{check_is_admin, check_is_own_acc};
+use crate::auth::permissions::check_is_admin;
+use crate::user::{pepper_password, PasswordChange, User, UserData};
 use crate::AppState;
-use crate::user::{match_role, pepper_password, PasswordChange, User, UserData};
 use axum::extract::State;
 use axum::Json;
-use bcrypt::{hash, verify};
+use bcrypt::verify;
 use http::StatusCode;
-use sqlx::SqlitePool;
 
 pub async fn handle_admin_edit_user_valid(
     State(state): State<AppState>,

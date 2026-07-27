@@ -1,11 +1,10 @@
-use crate::AppState;
 use crate::user::{RegisterRequest, User};
+use crate::AppState;
 use axum::extract::State;
 use axum::response::IntoResponse;
 use axum::Json;
 use http::StatusCode;
 use regex::Regex;
-use sqlx::sqlite::SqliteOperation::Insert;
 
 /// Create new user with login, password, 2nd password (double verification) and email
 // pub async fn handler_user_new(
