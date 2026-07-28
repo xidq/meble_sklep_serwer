@@ -1,7 +1,7 @@
 [workspace]
 members = [
     "src/server",
-    "src/login", "src/auth", "src/models", "src/id_handling", "src/sqlite_serv", "src/avif_image_handler", "fv_ksef",
+    "src/login", "src/auth", "src/models", "src/id_handling", "src/sqlite_serv", "src/avif_image_handler",
 ]
 
 
