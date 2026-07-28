@@ -6,7 +6,7 @@ use axum::Json;
 use http::StatusCode;
 use regex::Regex;
 
-/// Create new user with login, password, 2nd password (double verification) and email
+// /// Create new user with login, password, 2nd password (double verification) and email
 // pub async fn handler_user_new(
 //     State(state): State<AppState>,
 //     Json(payload): Json<RegisterRequest>,

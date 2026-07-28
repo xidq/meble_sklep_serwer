@@ -23,8 +23,8 @@ pub async fn handle_admin_edit_user_valid(
                 WHERE id = ?
         "#
     )
-        .bind(&payload.valid)
-        .bind(&payload.id)
+        .bind(payload.valid)
+        .bind(payload.id)
         .execute(&state.db)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
@@ -113,7 +113,7 @@ pub async fn handler_edit_user_password(
         "#
             )
                 .bind(&peppered_new)
-                .bind(&claims.sub)
+                .bind(claims.sub)
                 .execute(&state.db)
                 .await
                 .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;

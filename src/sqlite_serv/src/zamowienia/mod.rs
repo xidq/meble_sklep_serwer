@@ -1,6 +1,6 @@
 pub mod post;
 pub mod get;
-// mod put;
+pub mod put;
 // mod ksef;
 
 use chrono::{Datelike, Local};
@@ -100,6 +100,8 @@ pub struct AdminZamowieniaItemView {
     pub lokacja: ZamowienieLokacja,
     #[serde(flatten)]
     pub faktura_dane: Option<ZamowienieFV>,
+    #[serde(flatten)]
+    pub transport: Option<DaneTransportu>,
     pub imie: String,
     pub nazwisko: String,
 }

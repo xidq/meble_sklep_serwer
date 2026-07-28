@@ -69,6 +69,11 @@ pub fn build_router(state: AppState) -> Router {
                 get(sqlite_serv::zamowienia::get::handler_admin_get_order_lists)
         )
         .route(
+            "/admin/orders/{order_id}",
+                get(sqlite_serv::zamowienia::get::handler_admin_get_order_item_by_id)
+                    .put(sqlite_serv::zamowienia::put::handle_admin_edit_orders)
+        )
+        .route(
             "/admin/usr/{name_id}",
             get(sqlite_serv::user::get::handler_get_user_data_by_nameid) //get user data
                 .delete(sqlite_serv::user::delete::handler_delete_user_by_id)
@@ -99,8 +104,8 @@ pub fn build_router(state: AppState) -> Router {
             get(sqlite_serv::model::get::handler_get_models_data_by_id)
         )
         .route(
-            "/api/models/upload",
-            get(sqlite_serv::model::upload::handler_model_upload_to_server)
+            "/api/models/upload/{id}",
+            post(sqlite_serv::model::upload::handler_model_upload_to_server)
         )
         .route(
             "/wss",

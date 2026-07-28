@@ -29,8 +29,8 @@ pub async fn handle_put_order_new(
 
     let (produkty_netto, produkty_vat) = payload.przedmioty.iter()
         .fold((0.0, 0.0), |(acc_netto, acc_vat), item| {
-            let netto = item.cena as f64 * item.ilosc as f64;
-            let vat_kwota = netto * (item.vat as f64 / 100.0);
+            let netto = item.cena * item.ilosc as f64;
+            let vat_kwota = netto * (item.vat / 100.0);
 
             (acc_netto + netto, acc_vat + vat_kwota)
         });
