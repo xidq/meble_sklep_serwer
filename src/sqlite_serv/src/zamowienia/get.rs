@@ -1,6 +1,6 @@
 use crate::auth::claims::Claims;
 use crate::auth::permissions::check_is_admin;
-use crate::zamowienia::{AdminZamowieniaListView, DaneTransportu, Zamowienie, ZamowienieFV, ZamowienieLokacja};
+use crate::zamowienia::{AdminZamowieniaItemView, AdminZamowieniaListView, DaneTransportu, Zamowienie, ZamowienieFV, ZamowienieLokacja};
 use crate::AppState;
 use axum::extract::State;
 use axum::Json;
@@ -73,7 +73,7 @@ pub async fn handler_admin_get_order_lists(
 
     check_is_admin(&claims)?;
     
-    let rows = sqlx::query("SELECT id, user_id, date, cena_dziesiatki, cena_grosze, numer_fv, oplacone FROM orders")
+    let rows = sqlx::query("SELECT id, user_id, date, cena_dziesiatki, cena_grosze, vat_dziesiatki, vat_grosze, cena_grosze, numer_fv, oplacone FROM orders")
         // .bind(claims.sub)
         .fetch_all(&state.db)
         .await
@@ -90,6 +90,12 @@ pub async fn handler_admin_get_order_lists(
                 let wyjscie = dziesiatki as f64 + (jednosci as f64 / 100.);
                 wyjscie
             },
+            vat: {
+                let dziesiatki = row.get::<i64, _>("vat_dziesiatki");
+                let jednosci = row.get::<i64, _>("vat_grosze");
+                let wyjscie = dziesiatki as f64 + (jednosci as f64 / 100.);
+                wyjscie
+            },
             numer_fv: row.get("numer_fv"),
             oplacone: row.get("oplacone"),
             status: row.get("status"),
@@ -98,3 +104,38 @@ pub async fn handler_admin_get_order_lists(
 
     Ok(Json(orders))
 }
+
+// todo!("dokończyć zbieranie danych zamówień przez wybór admina")
+// pub async fn handler_admin_get_order_item_by_id(
+//     State(state): State<AppState>,
+//     claims: Claims,
+//     axum::extract::Path(id): axum::extract::Path<i64>,
+// ) -> Result<Json<Vec<AdminZamowieniaItemView>>, (StatusCode, String)> {
+//
+//     check_is_admin(&claims)?;
+//
+//     let rows = sqlx::query("SELECT id, user_id, date, cena_dziesiatki, cena_grosze, numer_fv, oplacone FROM orders WHERE id = ?")
+//         .bind(id)
+//         .fetch_all(&state.db)
+//         .await
+//         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+//
+//     let orders = rows.into_iter().map(|row: SqliteRow| {
+//         AdminZamowieniaItemView {
+//             id: row.get("id"),
+//             user_id: row.get("user_id"),
+//             date: row.get("date"),
+//             cena: {
+//                 let dziesiatki = row.get::<i64, _>("cena_dziesiatki");
+//                 let jednosci = row.get::<i64, _>("cena_grosze");
+//                 let wyjscie = dziesiatki as f64 + (jednosci as f64 / 100.);
+//                 wyjscie
+//             },
+//             numer_fv: row.get("numer_fv"),
+//             oplacone: row.get("oplacone"),
+//             status: row.get("status"),
+//         }
+//     }).collect();
+//
+//     Ok(Json(orders))
+// }

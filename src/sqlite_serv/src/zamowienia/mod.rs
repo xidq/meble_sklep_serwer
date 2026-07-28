@@ -86,9 +86,22 @@ pub struct AdminZamowieniaListView {
     user_id: i64,
     date: String,
     cena: f64,
+    vat: f64,
     numer_fv: String,
     oplacone: StatusOplacenia,
     status: StatusZamowienia
+}
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct AdminZamowieniaItemView {
+    id: i64,
+    email: String,
+    tel: String,
+    #[serde(flatten)]
+    pub lokacja: ZamowienieLokacja,
+    #[serde(flatten)]
+    pub faktura_dane: Option<ZamowienieFV>,
+    pub imie: String,
+    pub nazwisko: String,
 }
 #[derive(Serialize, Deserialize, FromRow, Debug, Clone)]
 pub struct Zamowienie<T> {
