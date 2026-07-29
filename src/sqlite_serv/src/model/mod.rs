@@ -43,6 +43,13 @@ pub struct Model{
 //         })
 //     }
 // }
+#[derive(Serialize, Deserialize,  Debug, Clone, FromRow)]
+pub struct ModelPayload{
+    pub name_id: String,
+    pub wood: f64,
+    pub metal: f64,
+    pub glass: f64,
+}
 impl<'r> FromRow<'r, sqlx::sqlite::SqliteRow> for Model {
     fn from_row(row: &'r sqlx::sqlite::SqliteRow) -> Result<Self, sqlx::Error> {
         let product_id: i64 = row.try_get("product_id")?;
