@@ -8,11 +8,13 @@ mod tests {
     use env_thingy::JWT_SECRET;
     use env_thingy::PEPPER_KEY;
     use sqlite_serv::user::User;
-    use crate::build_router; // <--- Użyj pełnej ścieżki do funkcji z main.rs
+    use crate::{build_router, load_env_data}; // <--- Użyj pełnej ścieżki do funkcji z main.rs
     use sqlite_serv::AppState;
 
     #[tokio::test]
     async fn test_mojego_routera() {
+
+        load_env_data().ok();
         let pool = sqlx::SqlitePool::connect_lazy("sqlite::memory:").unwrap();
         sqlx::migrate!("../../migrations/data").run(&pool).await.unwrap();
 
@@ -52,7 +54,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_ws_handshake_dziala() {
-
+        load_env_data().ok();
         // let _ = JWT_SECRET.set("test_secret".as_bytes().to_vec());
         let pool = sqlx::SqlitePool::connect_lazy("sqlite::memory:").unwrap();
         sqlx::migrate!("../../migrations/data").run(&pool).await.unwrap();
