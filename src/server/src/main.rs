@@ -91,6 +91,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
 
     // ---------------------------------------------------------------
     println!("Write '{}' or press {}, to shut down such server.", "exit".bold().blue(), "Ctrl+C".bold().blue());
+    println!("\n------------------------------\n");
 
     // Zadanie nasłuchujące na konsolę (wpisanie 'exit' lub 'stop')
     let stdin_future = async {
