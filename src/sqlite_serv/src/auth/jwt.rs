@@ -1,11 +1,7 @@
 use crate::auth::claims::Claims;
 use axum::http::{HeaderMap, StatusCode};
 use jsonwebtoken::{decode, DecodingKey, Validation};
-// use sqlx::Row;
-use std::sync::OnceLock;
-
-pub static JWT_SECRET: OnceLock<Vec<u8>> = OnceLock::new();
-
+use env_thingy::JWT_SECRET;
 
 pub fn extract_and_verify_jwt(headers: &HeaderMap) -> Result<Claims, StatusCode> {
 println!("Extracting JWT");
@@ -34,28 +30,30 @@ println!("Extracting JWT");
         .map_err(|_| StatusCode::UNAUTHORIZED) // Jeśli podpis sfałszowany lub token wygasł err401
 }
 
-/// Initializing JWT, different effect for dev and -r.
-/// 
-/// For debug|tests is taken from env file
-pub fn initialize_jwt_secret() {
-    // losowy klucz przy każdym starcie
-    // #[cfg(not(debug_assertions))]
-    // {
-    //     use rand::Rng;
-    //     let mut dynamic_key = [0u8; 32];
-    //     rand::rng().fill(&mut dynamic_key);
-    //
-    //     JWT_SECRET.set(dynamic_key.to_vec()).expect("Błąd inicjalizacji klucza (release)");
-    //     println!("RELEASE: Wygenerowano losowy klucz JWT.");
-    // }
-    //
-    // // ładowany z konfiguracji
-    // #[cfg(debug_assertions)]
-    {
-        let secret = std::env::var("JWT_SECRET_KEY")
-            .expect("W trybie debug zmienna JWT_SECRET_KEY jest wymagana!");
-
-        JWT_SECRET.set(secret.into_bytes()).expect("Błąd inicjalizacji klucza (debug)");
-        println!("DEBUG: Załadowano klucz JWT z konfiguracji.");
-    }
-}
+// Initializing JWT, different effect for dev and -r.
+//
+// For debug|tests is taken from env file
+// pub fn initialize_jwt_secret() {
+//     // losowy klucz przy każdym starcie
+//     // #[cfg(not(debug_assertions))]
+//     // {
+//     //     use rand::Rng;
+//     //     let mut dynamic_key = [0u8; 32];
+//     //     rand::rng().fill(&mut dynamic_key);
+//     //
+//     //     JWT_SECRET.set(dynamic_key.to_vec()).expect("Błąd inicjalizacji klucza (release)");
+//     //     println!("RELEASE: Wygenerowano losowy klucz JWT.");
+//     // }
+//     //
+//     // // ładowany z konfiguracji
+//     // #[cfg(debug_assertions)]
+//     // {
+//     //     let secret = std::env::var("JWT_SECRET_KEY")
+//     //         .expect("W trybie debug zmienna JWT_SECRET_KEY jest wymagana!");
+//     //
+//     //     JWT_SECRET.set(secret.into_bytes()).expect("Błąd inicjalizacji klucza (debug)");
+//     //     println!("DEBUG: Załadowano klucz JWT z konfiguracji.");
+//     // }
+//
+//     println!("jwt git!");
+// }

@@ -50,6 +50,11 @@ pub struct ModelPayload{
     pub metal: f64,
     pub glass: f64,
 }
+#[derive(Serialize, Deserialize,  Debug, Clone, FromRow)]
+pub struct AllModelPayload{
+    #[serde(flatten)]
+    model: Vec<ModelPayload>,
+}
 impl<'r> FromRow<'r, sqlx::sqlite::SqliteRow> for Model {
     fn from_row(row: &'r sqlx::sqlite::SqliteRow) -> Result<Self, sqlx::Error> {
         let product_id: i64 = row.try_get("product_id")?;

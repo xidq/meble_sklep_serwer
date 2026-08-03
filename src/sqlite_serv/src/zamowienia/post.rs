@@ -1,11 +1,12 @@
 use crate::auth::claims::Claims;
 use crate::odleglosci_mapa::oblicz_odleglosc_do_klienta;
 use crate::zamowienia::{generate_fv_number, CaloscioweZamowienie, Pieniadze, Waluta, Zamowienie, ZamowieniePozycja};
-use crate::{AppState, FRONT_SERV_ADRESS};
+use crate::AppState;
 use axum::extract::State;
 use axum::Json;
 use http::StatusCode;
 use sqlx::SqlitePool;
+use env_thingy::FRONT_SERV_ADRESS;
 
 async fn get_payment_redirect_url() -> Result<String, (StatusCode, String)> {
     let url = format!("{}index.html",FRONT_SERV_ADRESS.get().unwrap_or(&String::new()));

@@ -9,7 +9,7 @@ use serde::{Deserialize, Deserializer, Serialize};
 use sha2::Sha512;
 use sqlx::FromRow;
 use strum::Display;
-use crate::PEPPER_KEY;
+use env_thingy::PEPPER_KEY;
 
 #[derive(Deserialize)]
 pub struct RegisterRequest {

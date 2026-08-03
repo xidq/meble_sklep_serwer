@@ -96,16 +96,28 @@ pub fn build_router(state: AppState) -> Router {
                 .delete(sqlite_serv::product::delete::handler_delete_product_by_id)
         )
         .route(
-            "/api/models",
+            "/api/models/list",
             get(sqlite_serv::model::get::handler_get_models_list)
         )
         .route(
-            "/api/models/{id}",
+            "/api/models/data/{id}",
             get(sqlite_serv::model::get::handler_get_models_data_by_id)
         )
         .route(
             "/api/models/upload/{id}",
             post(sqlite_serv::model::upload::handler_model_upload_to_server)
+        )
+        .route(
+            "/api/models/refresh/{id}",
+            post(sqlite_serv::model::post::handler_refresh_model_json_at_front)
+        )
+        .route(
+            "/api/models/refresh",
+            post(sqlite_serv::model::post::handler_refresh_all_models_json_at_front)
+        )
+        .route(
+            "/api/admin/sync/models",
+            get(sqlite_serv::model::get::handler_sync_models_json)
         )
         .route(
             "/wss",

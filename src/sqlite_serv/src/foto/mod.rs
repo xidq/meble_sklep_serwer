@@ -5,7 +5,7 @@ mod post;
 mod delete;
 pub mod upload;
 
-use crate::FILES_LOCATION;
+use env_thingy::FILES_LOCATION;
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, Row};
 use std::collections::BTreeMap;

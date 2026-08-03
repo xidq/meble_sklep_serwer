@@ -9,7 +9,7 @@ use chrono::{Duration, Utc};
 use futures_util::{SinkExt, StreamExt};
 use jsonwebtoken::{encode, EncodingKey, Header};
 use sqlite_serv::auth::claims::Claims;
-use sqlite_serv::auth::jwt::JWT_SECRET;
+use env_thingy::JWT_SECRET;
 use sqlite_serv::product::get::get_products_list;
 use sqlite_serv::AppState;
 use sqlite_serv::user::get::get_user_by_username;

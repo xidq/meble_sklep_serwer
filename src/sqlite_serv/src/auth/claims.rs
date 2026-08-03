@@ -1,4 +1,4 @@
-use crate::auth::jwt::{extract_and_verify_jwt, JWT_SECRET};
+use crate::auth::jwt::extract_and_verify_jwt;
 use axum::extract::FromRequestParts;
 use axum::http::header::AUTHORIZATION;
 use axum::http::request::Parts;
@@ -6,6 +6,7 @@ use axum::http::{HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Response};
 use jsonwebtoken::{decode, DecodingKey, Validation};
 use serde::{Deserialize, Serialize};
+use env_thingy::JWT_SECRET;
 // --- MODELE DANYCH ---
 
 #[derive(Debug, Serialize, Deserialize)]

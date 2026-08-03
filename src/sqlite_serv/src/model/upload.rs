@@ -1,5 +1,5 @@
 use crate::auth::sending_data::{files_send_to_server, json_send_to_server, RodzajeDanychJson};
-use crate::foto::{get_items_prefix, FotoData};
+use crate::foto::get_items_prefix;
 use crate::model::{Model, ModelPayload};
 use crate::product::get::get_products_nameid_by_id;
 use crate::AppState;
@@ -88,7 +88,7 @@ pub async fn handler_model_upload_to_server(
 
 
     let payload = get_model_stats_by_nameid(&name_id, &state.db).await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Błąd pobierania danych z bazy: {:?}", e)))?;;
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Błąd pobierania danych z bazy: {:?}", e)))?;
 
     // 5. Aktualizacja w bazie – UPSERT robimy RAZ po zebraniu wszystkich LOD-ów i tekstury!
     model_upsert_in_database(&state.db, &plik_modelu)

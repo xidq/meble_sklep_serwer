@@ -176,8 +176,8 @@ pub struct ZamowieniePozycja<T>{
 }
 #[derive(sqlx::FromRow)]
 struct LastOrderData{
-    _date: String,
-    number: String,
+    date: String,
+    numer_fv: String,
 }
 pub async fn generate_fv_number(pool: &SqlitePool) -> Result<String, sqlx::Error> {
     let now = Local::now();
@@ -188,7 +188,7 @@ pub async fn generate_fv_number(pool: &SqlitePool) -> Result<String, sqlx::Error
 
     let new_number = if let Some(order) = last_order {
         // order.numer_fv = "FV/MM/YYYY/NR"
-        let parts: Vec<&str> = order.number.split('/').collect();
+        let parts: Vec<&str> = order.numer_fv.split('/').collect();
         let last_month: u32 = parts[1].parse().unwrap_or(0);
         let last_year: i32 = parts[2].parse().unwrap_or(0);
         let last_seq: u32 = parts[3].parse().unwrap_or(0);

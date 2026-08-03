@@ -5,8 +5,8 @@ mod tests {
     use axum_server::tls_rustls::RustlsConfig;
     use futures_util::StreamExt;
     use tower::ServiceExt;
-    use sqlite_serv::auth::jwt::JWT_SECRET;
-    use sqlite_serv::PEPPER_KEY;
+    use env_thingy::JWT_SECRET;
+    use env_thingy::PEPPER_KEY;
     use sqlite_serv::user::User;
     use crate::build_router; // <--- Użyj pełnej ścieżki do funkcji z main.rs
     use sqlite_serv::AppState;
@@ -53,8 +53,7 @@ mod tests {
     #[tokio::test]
     async fn test_ws_handshake_dziala() {
 
-        // 1. Setup
-        let _ = JWT_SECRET.set("test_secret".as_bytes().to_vec()); // Inicjalizacja sekretu
+        // let _ = JWT_SECRET.set("test_secret".as_bytes().to_vec());
         let pool = sqlx::SqlitePool::connect_lazy("sqlite::memory:").unwrap();
         sqlx::migrate!("../../migrations/data").run(&pool).await.unwrap();
         let (ws_broadcast_tx, _) = tokio::sync::broadcast::channel(16);
