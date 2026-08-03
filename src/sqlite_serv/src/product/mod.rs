@@ -38,36 +38,105 @@ pub struct ProductUpdate {
     pub depth: Option<f32>,
 }
 
-impl Product{
-    pub fn new(
-        name_id: impl Into<String>,
-        name_pl: impl Into<String>,
-        name_en: impl Into<String>,
-        desc_pl: impl Into<String>,
-        desc_en: impl Into<String>,
-        wood_qua: f32,
-        metal_qua: f32,
-        glass_qua: f32,
-        price: f32,
-        width: f32,
-        height: f32,
-        depth: f32,
-    ) -> Self {
+impl Default for Product {
+    fn default() -> Product {
         Self{
             id: 0,
-            name_id: name_id.into(),
-            name_pl: name_pl.into(),
-            name_en: name_en.into(),
-            desc_pl: desc_pl.into(),
-            desc_en: desc_en.into(),
-            wood_qua,
-            metal_qua,
-            glass_qua,
-            price,
-            width,
-            height,
-            depth,
+            name_id: String::new(),
+            name_pl: String::new(),
+            name_en: String::new(),
+            desc_pl: String::new(),
+            desc_en: String::new(),
+            wood_qua: 0.0,
+            metal_qua: 0.0,
+            glass_qua: 0.0,
+            price: 0.0,
+            width: 0.0,
+            height: 0.0,
+            depth: 0.0,
         }
+    }
+}
+
+impl Product{
+    pub fn new(
+        // name_id: impl Into<String>,
+        // name_pl: impl Into<String>,
+        // name_en: impl Into<String>,
+        // desc_pl: impl Into<String>,
+        // desc_en: impl Into<String>,
+        // wood_qua: f32,
+        // metal_qua: f32,
+        // glass_qua: f32,
+        // price: f32,
+        // width: f32,
+        // height: f32,
+        // depth: f32,
+    ) -> Self {
+        // Self {
+        //     id: 0,
+        //     name_id: name_id.into(),
+        //     name_pl: name_pl.into(),
+        //     name_en: name_en.into(),
+        //     desc_pl: desc_pl.into(),
+        //     desc_en: desc_en.into(),
+        //     wood_qua,
+        //     metal_qua,
+        //     glass_qua,
+        //     price,
+        //     width,
+        //     height,
+        //     depth,
+        // }
+        Self::default()
+    }
+    pub fn add_name_id(mut self, val:impl Into<String>) -> Self{
+            self.name_id = val.into();
+            self
+    }
+    pub fn add_name_pl(mut self, val:impl Into<String>) -> Self{
+        self.name_pl = val.into();
+        self
+    }
+    pub fn add_name_en(mut self, val:impl Into<String>) -> Self{
+        self.name_en = val.into();
+        self
+    }
+    pub fn add_desc_pl(mut self, val:impl Into<String>) -> Self{
+        self.desc_pl = val.into();
+        self
+    }
+    pub fn add_desc_en(mut self, val:impl Into<String>) -> Self{
+        self.desc_en = val.into();
+        self
+    }
+    pub fn add_wood_qua(mut self, val:f32) -> Self {
+        self.wood_qua = val;
+        self
+    }
+    pub fn add_metal_qua(mut self, val:f32) -> Self {
+        self.metal_qua = val;
+        self
+    }
+    pub fn add_glass_qua(mut self, val:f32) -> Self {
+        self.glass_qua = val;
+        self
+    }
+    pub fn add_price(mut self, val:f32) -> Self {
+        self.price = val;
+        self
+    }
+    pub fn add_width(mut self, val:f32) -> Self {
+        self.width = val;
+        self
+    }
+    pub fn add_height(mut self, val:f32) -> Self {
+        self.height = val;
+        self
+    }
+    pub fn add_depth(mut self, val:f32) -> Self {
+        self.depth = val;
+        self
     }
 
     pub fn update(&mut self, change: ProductUpdate) {

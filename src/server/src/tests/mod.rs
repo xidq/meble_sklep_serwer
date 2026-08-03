@@ -1,15 +1,10 @@
 #[cfg(test)]
 mod tests {
-    use std::net::SocketAddr;
+    use crate::{build_router, load_env_data};
     use axum::{body::Body, http::{Request, StatusCode}};
-    use axum_server::tls_rustls::RustlsConfig;
-    use futures_util::StreamExt;
     use tower::ServiceExt;
-    use env_thingy::JWT_SECRET;
-    use env_thingy::PEPPER_KEY;
-    use sqlite_serv::user::User;
-    use crate::{build_router, load_env_data}; // <--- Użyj pełnej ścieżki do funkcji z main.rs
     use sqlite_serv::AppState;
+
 
     #[tokio::test]
     async fn test_mojego_routera() {

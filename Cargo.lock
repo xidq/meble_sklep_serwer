@@ -121,20 +121,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1505bd5d3d116872e7271a6d4e16d81d0c8570876c8de68093a09ac269d8aac0"
 
 [[package]]
-name = "auth"
-version = "0.1.0"
-dependencies = [
- "axum",
- "axum-core",
- "jsonwebtoken",
- "login",
- "rand 0.10.2",
- "serde",
- "serde_json",
- "sqlx",
-]
-
-[[package]]
 name = "autocfg"
 version = "1.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1664,15 +1650,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "id_handling"
-version = "0.1.0"
-dependencies = [
- "http",
- "serde",
- "sqlx",
-]
-
-[[package]]
 name = "idna"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2005,19 +1982,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0ceec5bc11778974d1bcb055b18002eba7f4b3518b6a0081b3af5f21666da9ad"
 
 [[package]]
-name = "login"
-version = "0.1.0"
-dependencies = [
- "bcrypt",
- "dotenvy",
- "hex",
- "hmac 0.13.0",
- "serde",
- "sha2 0.11.0",
- "strum",
-]
-
-[[package]]
 name = "loop9"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2110,17 +2074,6 @@ dependencies = [
  "libc",
  "wasi",
  "windows-sys 0.61.2",
-]
-
-[[package]]
-name = "models"
-version = "0.1.0"
-dependencies = [
- "auth",
- "axum",
- "http",
- "id_handling",
- "serde_json",
 ]
 
 [[package]]

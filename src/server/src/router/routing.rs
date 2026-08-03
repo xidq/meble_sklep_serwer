@@ -14,6 +14,9 @@ use env_thingy::{OnceLockExt, GOVERNOR_BURST_SIZE, GOVERNOR_RATE_LIMIT};
 /// [GET, POST, PUT and DELETE]
 pub fn build_router(state: AppState) -> Router {
 
+    let rate_limit = if cfg!(test){2} else {*GOVERNOR_RATE_LIMIT.v("")};
+    let burst_size = if cfg!(test){5} else {*GOVERNOR_BURST_SIZE.v("")};
+
     let cors = CorsLayer::new()
         .allow_origin(Any)
         .allow_methods(Any)
@@ -24,8 +27,8 @@ pub fn build_router(state: AppState) -> Router {
     let governor_conf = Arc::new(
         GovernorConfigBuilder::default()
             .key_extractor(SmartIpKeyExtractor) // <-- tu
-            .per_second(*GOVERNOR_RATE_LIMIT.v(""))
-            .burst_size(*GOVERNOR_BURST_SIZE.v(""))
+            .per_second(rate_limit)
+            .burst_size(burst_size)
             // .use_headers()
             .finish()
             .unwrap()
