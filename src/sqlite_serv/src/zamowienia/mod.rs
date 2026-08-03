@@ -21,6 +21,16 @@ pub struct Pieniadze{
     waluta: Waluta,
 }
 
+impl Default for Pieniadze{
+    fn default() -> Self {
+        Pieniadze{
+            dziesiatki: 0,
+            grosze: 0,
+            waluta: Waluta::Pln,
+        }
+    }
+}
+
 impl Pieniadze {
     pub fn new(kwota: f64, waluta: Waluta) -> Pieniadze {
 
@@ -127,12 +137,14 @@ pub struct Zamowienie<T> {
     pub imie: String,
     pub nazwisko: String,
 }
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct ZamowienieLokacja {
     pub ulica: String,
     pub miasto: String,
     pub kod_pocztowy: String,
 }
+
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct DaneTransportu {
     pub odleglosc_km: f64,
@@ -211,37 +223,88 @@ async fn get_last_order_number(pool: &SqlitePool) -> Result<Option<LastOrderData
         .fetch_optional(pool)
         .await
 }
-impl Zamowienie<Pieniadze> {
-    pub async fn new(
-        user_id: Option<i64>,
-        email: Option<impl Into <String>>,
-        tel: Option<impl Into <String>>,
-        lokacja: ZamowienieLokacja,
-        faktura_dane: Option<ZamowienieFV>,
-        transport: Option<DaneTransportu>,
-        imie: String,
-        nazwisko: String,
-        cena: Pieniadze,
-        vat: Pieniadze,
-        pool: &SqlitePool,
-    ) -> Self{
 
+impl Default for Zamowienie<Pieniadze> {
+    fn default() -> Self {
         Self{
             id: 0,
-            user_id,
-            imie,
-            nazwisko,
+            user_id: None,
+            imie: String::new(),
+            nazwisko: String::new(),
             date: chrono::Local::now().format("%Y-%m-%d | %H:%M:%S").to_string(),
-            email: email.map(|e| e.into()),
-            tel: tel.map(|t| t.into()),
-            lokacja,
-            faktura_dane,
-            transport,
-            cena, // kwota netto
-            vat,  // kwota vat
-            numer_fv: generate_fv_number(pool).await.ok().unwrap_or_default(),
+            email: None,
+            tel: None,
+            lokacja: ZamowienieLokacja::default(),
+            faktura_dane: None,
+            transport: None,
+            cena: Pieniadze::default(), // kwota netto
+            vat: Pieniadze::default(),  // kwota vat
+            numer_fv: String::new(),
             oplacone: StatusOplacenia::Nieoplacone,
             status: StatusZamowienia::ZamowieniePrzyjete,
         }
+    }
+}
+impl Zamowienie<Pieniadze> {
+    pub fn new(
+        // user_id: Option<i64>,
+        // email: Option<impl Into <String>>,
+        // tel: Option<impl Into <String>>,
+        // lokacja: ZamowienieLokacja,
+        // faktura_dane: Option<ZamowienieFV>,
+        // transport: Option<DaneTransportu>,
+        // imie: String,
+        // nazwisko: String,
+        // cena: Pieniadze,
+        // vat: Pieniadze,
+        // pool: &SqlitePool,
+    ) -> Self{
+
+        Self::default()
+    }
+    pub fn add_user_id(mut self, val: Option<i64>) -> Self{
+        self.user_id = val;
+        self
+    }
+    pub fn add_email(mut self, val: Option<impl Into <String>>) -> Self{
+        self.email = val.map(|e| e.into());
+        self
+    }
+    pub fn add_tel(mut self, val: Option<impl Into <String>>) -> Self{
+        self.tel = val.map(|e| e.into());
+        self
+    }
+    pub fn add_fv(mut self, val: Option<ZamowienieFV>) -> Self{
+        self.faktura_dane = val;
+        self
+    }
+    pub fn add_transport(mut self, val: Option<DaneTransportu>) -> Self{
+        self.transport = val;
+        self
+    }
+    pub fn add_imie(mut self, val: String) -> Self{
+        self.imie = val;
+        self
+    }
+    pub fn add_nazwisko(mut self, val: String) -> Self{
+        self.nazwisko = val;
+        self
+    }
+    pub fn add_cena(mut self, val: Pieniadze) -> Self{
+        self.cena = val;
+        self
+    }
+    pub fn add_vat(mut self, val: Pieniadze) -> Self{
+        self.vat = val;
+        self
+    }
+    pub async fn generuj_nr_fv(mut self, pool: &SqlitePool) -> Self {
+        let numer = generate_fv_number(pool).await.ok().unwrap_or_default();
+        self.numer_fv = numer;
+        self
+    }
+    pub fn add_lokacja(mut self, val: ZamowienieLokacja) -> Self{
+        self.lokacja = val;
+        self
     }
 }

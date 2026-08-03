@@ -11,9 +11,7 @@ http = { workspace = true }
 serde_json = { workspace = true }
 avif_image_handler = { path = "../avif_image_handler" }
 env_thingy = { path = "../env_thingy" }
-id_handling = { path = "../id_handling" }
 tokio = { workspace = true }
-axum-macros =  { workspace = true }
 anyhow = { workspace = true }
 reqwest = { workspace = true }
 chrono = { workspace = true }
@@ -24,4 +22,3 @@ hex = { workspace = true }
 bcrypt = { workspace = true }
 regex = { workspace = true }
 jsonwebtoken = { workspace = true }
-rand = { workspace = true }

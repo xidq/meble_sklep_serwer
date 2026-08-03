@@ -56,19 +56,19 @@ pub async fn handle_put_order_new(
 
     let dane_trasy = kwota_za_trase;
 
-    let nowe_zamowienie = Zamowienie::new(
-        payload.dane.user_id,
-        payload.dane.email,
-        payload.dane.tel,
-        payload.dane.lokacja,
-        payload.dane.faktura_dane,
-        dane_trasy,
-        payload.dane.imie,
-        payload.dane.nazwisko,
-        Pieniadze::new(calkowita_kwota_netto, Waluta::Pln),
-        Pieniadze::new(calkowita_kwota_vat, Waluta::Pln),
-        &state.db,
-    ).await;
+    let nowe_zamowienie = Zamowienie::new()
+        .add_user_id(payload.dane.user_id)
+        .add_imie(payload.dane.imie)
+        .add_nazwisko(payload.dane.nazwisko)
+        .add_email(payload.dane.email)
+        .add_tel(payload.dane.tel)
+        .add_lokacja(payload.dane.lokacja)
+        .add_fv(payload.dane.faktura_dane)
+        .add_transport(dane_trasy)
+        .add_cena(Pieniadze::new(calkowita_kwota_netto, Waluta::Pln))
+        .add_vat(Pieniadze::new(calkowita_kwota_vat, Waluta::Pln))
+        .generuj_nr_fv(&state.db).await;
+
     let zmapowane_pozycje: Vec<ZamowieniePozycja<Pieniadze>> = payload.przedmioty.into_iter().map(|item| {
         ZamowieniePozycja {
             zamowienie_id: 0,

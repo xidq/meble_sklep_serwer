@@ -1,12 +1,10 @@
-use crate::auth::jwt::extract_and_verify_jwt;
 use axum::extract::FromRequestParts;
 use axum::http::header::AUTHORIZATION;
 use axum::http::request::Parts;
-use axum::http::{HeaderMap, StatusCode};
-use axum::response::{IntoResponse, Response};
+use axum::http::StatusCode;
+use env_thingy::{OnceLockExt, JWT_SECRET};
 use jsonwebtoken::{decode, DecodingKey, Validation};
 use serde::{Deserialize, Serialize};
-use env_thingy::{OnceLockExt, JWT_SECRET};
 // --- MODELE DANYCH ---
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -84,14 +82,19 @@ where
 //     }
 // }
 
-pub fn claims_match(headers: &HeaderMap) -> Result<Claims, Response> {
-    match extract_and_verify_jwt(headers) {
-        Ok(c) => {
-            if c.role != "Admin" {
-                return Err((StatusCode::FORBIDDEN, "Brak uprawnień administratora. Wymagana rola: Admin").into_response());
-            }
-            Ok(c)
-        }
-        Err(status) => Err(status.into_response()),
-    }
-}
+// pub fn claims_match(headers: &HeaderMap) -> Result<Claims, Box<Response>> {
+//     match extract_and_verify_jwt(headers) {
+//         Ok(c) => {
+//             if c.role != "Admin" {
+//                 let res = (
+//                     StatusCode::FORBIDDEN,
+//                     "Brak uprawnień administratora. Wymagana rola: Admin",
+//                 )
+//                     .into_response();
+//                 return Err(Box::new(res));
+//             }
+//             Ok(c)
+//         }
+//         Err(status) => Err(Box::new(status.into_response())),
+//     }
+// }

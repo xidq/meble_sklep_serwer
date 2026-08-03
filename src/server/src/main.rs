@@ -24,7 +24,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
     let db_url = DATABASE_URL.v("");
 
     let pool = if cfg!(docker) {
-        let connection_options = SqliteConnectOptions::from_str(&db_url)?
+        let connection_options = SqliteConnectOptions::from_str(db_url)?
             .create_if_missing(true)
             .journal_mode(SqliteJournalMode::Wal)
             .busy_timeout(std::time::Duration::from_secs(5));
@@ -36,7 +36,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
     } else {
         SqlitePoolOptions::new()
             .max_connections(5)
-            .connect(&db_url)
+            .connect(db_url)
             .await?
     };
 
