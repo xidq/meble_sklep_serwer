@@ -1,7 +1,7 @@
 use crate::auth::claims::Claims;
 use axum::http::{HeaderMap, StatusCode};
 use jsonwebtoken::{decode, DecodingKey, Validation};
-use env_thingy::JWT_SECRET;
+use env_thingy::{OnceLockExt, JWT_SECRET};
 
 pub fn extract_and_verify_jwt(headers: &HeaderMap) -> Result<Claims, StatusCode> {
 println!("Extracting JWT");
@@ -23,7 +23,7 @@ println!("Extracting JWT");
     // Dekodowanie i krypto ver podpisu i czasu ważności
     decode::<Claims>(
         token,
-        &DecodingKey::from_secret(JWT_SECRET.get().expect("Klucz JWT nie został zainicjalizowany!")),
+        &DecodingKey::from_secret(JWT_SECRET.v("")),
         &Validation::default(),
     )
         .map(|data| data.claims)

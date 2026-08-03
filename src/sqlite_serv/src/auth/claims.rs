@@ -6,7 +6,7 @@ use axum::http::{HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Response};
 use jsonwebtoken::{decode, DecodingKey, Validation};
 use serde::{Deserialize, Serialize};
-use env_thingy::JWT_SECRET;
+use env_thingy::{OnceLockExt, JWT_SECRET};
 // --- MODELE DANYCH ---
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -33,7 +33,7 @@ where
 
         let token = &auth_header[7..];
 
-        let secret = JWT_SECRET.get().expect("Klucz JWT nie został zainicjalizowany!");
+        let secret = JWT_SECRET.v("");
 
         decode::<Claims>(
             token,

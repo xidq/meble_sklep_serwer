@@ -9,7 +9,7 @@ use serde::{Deserialize, Deserializer, Serialize};
 use sha2::Sha512;
 use sqlx::FromRow;
 use strum::Display;
-use env_thingy::PEPPER_KEY;
+use env_thingy::{OnceLockExt, PEPPER_KEY};
 
 #[derive(Deserialize)]
 pub struct RegisterRequest {
@@ -108,7 +108,7 @@ fn pepper_password(plain_password: &str) -> String {
 
 pub fn get_pepper_key() -> &'static [u8] {
     println!("pepper key!!!");
-    PEPPER_KEY.get().expect("PEPPER_KEY nie jest zainicjalizowany").as_bytes()
+    PEPPER_KEY.v("PEPPER_KEY nie jest zainicjalizowany").as_bytes()
     // std::env::var("PEPPER_KEY").expect("Brak PEPPER_KEY w .env")
 }
 impl User {

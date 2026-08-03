@@ -9,7 +9,7 @@ use chrono::{Duration, Utc};
 use futures_util::{SinkExt, StreamExt};
 use jsonwebtoken::{encode, EncodingKey, Header};
 use sqlite_serv::auth::claims::Claims;
-use env_thingy::JWT_SECRET;
+use env_thingy::{OnceLockExt, JWT_SECRET};
 use sqlite_serv::product::get::get_products_list;
 use sqlite_serv::AppState;
 use sqlite_serv::user::get::get_user_by_username;
@@ -56,7 +56,7 @@ pub async fn login_handler(
             exp: expiration,
         };
 
-        match encode(&Header::default(), &claims, &EncodingKey::from_secret(JWT_SECRET.get().expect("Klucz JWT nie został zainicjalizowany!"))) {
+        match encode(&Header::default(), &claims, &EncodingKey::from_secret(JWT_SECRET.v(""))) {
             Ok(token) => (
                 StatusCode::OK,
                 Json(LoginResponse {

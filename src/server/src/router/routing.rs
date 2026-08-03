@@ -8,6 +8,7 @@ use tower_governor::governor::GovernorConfigBuilder;
 use tower_governor::key_extractor::SmartIpKeyExtractor;
 use tower_governor::GovernorLayer;
 use tower_http::cors::{Any, CorsLayer};
+use env_thingy::{OnceLockExt, GOVERNOR_BURST_SIZE, GOVERNOR_RATE_LIMIT};
 
 /// Function that handles routing from external server
 /// [GET, POST, PUT and DELETE]
@@ -23,8 +24,8 @@ pub fn build_router(state: AppState) -> Router {
     let governor_conf = Arc::new(
         GovernorConfigBuilder::default()
             .key_extractor(SmartIpKeyExtractor) // <-- tu
-            .per_second(2)
-            .burst_size(5)
+            .per_second(*GOVERNOR_RATE_LIMIT.v(""))
+            .burst_size(*GOVERNOR_BURST_SIZE.v(""))
             // .use_headers()
             .finish()
             .unwrap()

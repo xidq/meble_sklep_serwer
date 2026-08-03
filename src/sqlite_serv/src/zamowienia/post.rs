@@ -6,10 +6,10 @@ use axum::extract::State;
 use axum::Json;
 use http::StatusCode;
 use sqlx::SqlitePool;
-use env_thingy::FRONT_SERV_ADRESS;
+use env_thingy::{OnceLockExt, FRONT_SERV_ADDRESS};
 
 async fn get_payment_redirect_url() -> Result<String, (StatusCode, String)> {
-    let url = format!("{}index.html",FRONT_SERV_ADRESS.get().unwrap_or(&String::new()));
+    let url = format!("{}index.html", FRONT_SERV_ADDRESS.v(""));
 
     Ok(url)
 }
