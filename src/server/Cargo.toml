@@ -24,3 +24,4 @@ axum-server = { workspace = true }
 anyhow = { workspace = true }
 
 env_thingy = { path = "../env_thingy" }
+colored = { workspace = true }

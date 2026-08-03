@@ -14,6 +14,8 @@ use std::net::SocketAddr;
 use std::str::FromStr;
 use tokio::io::AsyncBufReadExt;
 use tokio::sync::broadcast;
+use colored;
+use colored::Colorize;
 
 /// Main fn of such server
 #[tokio::main]
@@ -43,9 +45,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
     println!("Uruchamianie migracji dla bazy danych...");
     sqlx::migrate!("../../migrations/data").run(&pool).await?;
 
-    println!("Wszystkie bazy danych zostały pomyślnie zsynchronizowane!");
+    println!("{}","Wszystkie bazy danych zostały pomyślnie zsynchronizowane!".green());
 
-    println!("Migracje zakończone sukcesem.");
+    println!("{}","Migracje zakończone sukcesem.".green());
 
     let (ws_broadcast_tx, _) = broadcast::channel::<String>(16);
 
@@ -88,7 +90,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
     // Ok(())
 
     // ---------------------------------------------------------------
-    println!("Wpisz 'exit' lub naciśnij Ctrl+C, aby wyłączyć serwer.");
+    println!("Write '{}' or press {}, to shut down such server.", "exit".bold().blue(), "Ctrl+C".bold().blue());
 
     // Zadanie nasłuchujące na konsolę (wpisanie 'exit' lub 'stop')
     let stdin_future = async {
@@ -99,7 +101,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
         while let Ok(Some(line)) = lines.next_line().await {
             let trimmed = line.trim();
             if trimmed.eq_ignore_ascii_case("exit") || trimmed.eq_ignore_ascii_case("stop") {
-                println!("Otrzymano komendę z konsoli. Zamykanie serwera...");
+                println!("{}", "Otrzymano komendę z konsoli. Zamykanie serwera...".yellow());
                 break;
             } else {
                 println!("Nieznana komenda: '{}'. Wpisz 'exit', aby wyłączyć.", trimmed);
@@ -110,7 +112,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
     // Zadanie nasłuchujące na Ctrl+C
     let ctrl_c_future = async {
         tokio::signal::ctrl_c().await.expect("Nie udało się nasłuchiwać sygnału Ctrl+C");
-        println!("\nOtrzymano sygnał Ctrl+C. Zamykanie serwera...");
+        println!("\n{}", "Otrzymano sygnał Ctrl+C. Zamykanie serwera...".yellow());
     };
 
     // Odpalamy serwer axum w tle, a główne wątki/future pilnują sygnału zamknięcia
@@ -130,76 +132,70 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
 fn load_env_data() -> anyhow::Result<()>{
 
     dotenvy::dotenv()?;
-
-    println!("loading env data PEPPER_KEY. Status:");
+    
+    println!("{}", "Loading Environment Data...".bold().blue());
     let pepper_key = std::env::var("PEPPER_KEY")?;
     PEPPER_KEY.set(pepper_key).map_err(|e| anyhow::anyhow!("Nie udało się zainicjalizować PEPPER_KEY: {}",e))?;
-    println!("Ok!");
+    println!("PEPPER_KEY: {}", "Ok!".bold().green());
 
-    println!("loading env data FILES_URL. Status:");
     let files_location = std::env::var("FILES_URL")?;
     FILES_LOCATION.set(files_location).map_err(|e| anyhow::anyhow!("Nie udało się zainicjalizować FILES_LOCATION: {}", e))?;
-    println!("Ok");
+    println!("FILES_URL: {}", "Ok".bold().green());
 
-    println!("loading env data CURRENT_RUST_SERVER_PORT. Status:");
     let front_serv_port = std::env::var("CURRENT_RUST_SERVER_PORT")?;
     CURRENT_PORT.set(front_serv_port).map_err(|e| anyhow::anyhow!("Nie udało się zainicjalizować CURRENT_PORT: {}",e))?;
-    println!("Ok");
+    println!("CURRENT_RUST_SERVER_PORT: {}", "Ok".bold().green());
 
-    println!("loading env data CURRENT_RUST_SERVER_ADRES. Status:");
     let front_serv_address = std::env::var("CURRENT_RUST_SERVER_ADRES")?;
     CURRENT_ADDRESS.set(front_serv_address).map_err(|e| anyhow::anyhow!("Nie udało się zainicjalizować CURRENT_ADDRESS: {}",e))?;
-    println!("Ok");
+    println!("CURRENT_RUST_SERVER_ADRES: {}", "Ok".bold().green());
 
-    println!("loading env data FRONTEND_SERVER. Status:");
     let front_serv = std::env::var("FRONTEND_SERVER")?;
     FRONT_SERV_ADDRESS.set(front_serv).map_err(|e| anyhow::anyhow!("Nie udało się zainicjalizować FRONT_SERV_ADRESS: {}",e))?;
-    println!("Ok");
+    println!("FRONTEND_SERVER: {}", "Ok".bold().green());
 
-    println!("loading env data JWT_SECRET_KEY. Status:");
     let jwt = std::env::var("JWT_SECRET_KEY")?;
     JWT_SECRET.set(jwt.into_bytes()).map_err(|e| anyhow::anyhow!("Nie udało się zainicjalizować JWT_SECRET: {:?}",e))?;
-    println!("Ok");
+    println!("JWT_SECRET_KEY: {}", "Ok".bold().green());
 
-    println!("loading env data DATABASE_URL. Status:");
     let database = std::env::var("DATABASE_URL")?;
     DATABASE_URL.set(database).map_err(|e| anyhow::anyhow!("Nie udało się zainicjalizować DATABASE_URL: {}",e))?;
-    println!("Ok");
+    println!("DATABASE_URL: {}", "Ok".bold().green());
 
-    println!("loading env data RUST_TLS_CERT. Status:");
     let cert = std::env::var("RUST_TLS_CERT")?;
     TLS_CERT_PATH.set(cert).map_err(|e| anyhow::anyhow!("Nie udało się zainicjalizować TLS_CERT_PATH: {}",e))?;
-    println!("Ok");
+    println!("RUST_TLS_CERT: {}", "Ok".bold().green());
 
-    println!("loading env data RUST_TLS_KEY. Status:");
     let key = std::env::var("RUST_TLS_KEY")?;
     TLS_KEY_PATH.set(key).map_err(|e| anyhow::anyhow!("Nie udało się zainicjalizować TLS_KEY_PATH: {}",e))?;
-    println!("Ok");
+    println!("RUST_TLS_KEY: {}", "Ok".bold().green());
 
-    println!("loading env data GOV_BURST_SIZE. Status:");
     let burst = std::env::var("GOV_BURST_SIZE")?;
     let burst_parse: u32 = match burst.parse::<u32>(){
         Ok(x) => {x}
         Err(e) => {
-            println!("Error parsing burst limit : {}. Using default: 5", e);
+            println!("GOV_BURST_SIZE: {}: {}. Using default: 5", "Error parsing burst limit".bold().red(), e);
             5_u32
         }
     };
     GOVERNOR_BURST_SIZE.set(burst_parse).map_err(|e| anyhow::anyhow!("Nie udało się zainicjalizować GOVERNOR_BURST_SIZE: {}",e))?;
-    println!("Ok");
+    println!("GOV_BURST_SIZE: {}", "Ok".bold().green());
 
 
-    println!("loading env data GOV_RATE_LIMIT. Status:");
-    let rate_limit = std::env::var("GOV_RATE_LIMIT").expect("Brak GOV_RATE_LIMIT w .env");
+    // println!("loading env data GOV_RATE_LIMIT:");
+    let rate_limit = std::env::var("GOV_RATE_LIMIT")?;
     let rate_limit_parse:u64 = match rate_limit.parse::<u64>(){
         Ok(x) => {x}
         Err(e) => {
-            println!("Error parsing rate limit : {}. Using default: 2", e);
+            println!("GOV_RATE_LIMIT: {}: {}. Using default: 2", "Error parsing rate limit".bold().red(), e);
             2_u64
         }
     };
-    GOVERNOR_RATE_LIMIT.set(rate_limit_parse).map_err(|e| anyhow::anyhow!("Nie udało się zainicjalizować GOV_RATE_LIMIT: {}",e))?;
-    println!("Ok");
+    GOVERNOR_RATE_LIMIT.set(rate_limit_parse)
+        .map_err(|e| anyhow::anyhow!("Nie udało się zainicjalizować GOV_RATE_LIMIT: {}",e))?;
+    println!("GOV_RATE_LIMIT: {}", "Ok".bold().green());
+
+    println!("{}","-------------".blue().bold());
 
     Ok(())
 }
