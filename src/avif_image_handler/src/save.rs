@@ -9,6 +9,7 @@ pub async fn avif_match(
     img: DynamicImage,
     sciezka: &Path,
 ) -> Result<(), tokio::io::Error> {
+    println!("nazwa: {}\nścieżka: {:?}", nazwa, sciezka);
 
     let wymiar = vec![2048, 1024, 512, 256, 128, 64, 32, 16];
     for x in wymiar {
@@ -33,9 +34,12 @@ pub async fn avif_match(
 
         let heif_img = {
 
-            let (w, h) = reskalowanie.to_rgba8().dimensions();
-
-            let raw_u8: Vec<u8> = reskalowanie.as_bytes().to_vec();
+            // let (w, h) = reskalowanie.to_rgba8().dimensions();
+            //
+            // let raw_u8: Vec<u8> = reskalowanie.as_bytes().to_vec();
+            let rgba_img = reskalowanie.to_rgba8();
+            let (w, h) = rgba_img.dimensions();
+            let raw_u8 = rgba_img.into_raw();
 
             //
             let mut heif_img = Image::new(w, h, ColorSpace::Rgb(RgbChroma::C444))
@@ -56,18 +60,15 @@ pub async fn avif_match(
                 let data_b = planes.b.unwrap().data;
                 let data_a = planes.a.unwrap().data;
 
-                // Przechodzimy przez obraz rząd po rzędzie
                 for (y, row_src) in raw_u8.chunks_exact(w as usize * 4).enumerate() {
                     let row_offset = y * stride;
 
-                    // Wycinamy plasterki o długości dokładnie 'w' (bo to 1 bajt na piksel)
                     let row_r = &mut data_r[row_offset..row_offset + w as usize];
                     let row_g = &mut data_g[row_offset..row_offset + w as usize];
                     let row_b = &mut data_b[row_offset..row_offset + w as usize];
                     let row_a = &mut data_a[row_offset..row_offset + w as usize];
 
                     for (x, pixel) in row_src.chunks_exact(4).enumerate() {
-                        // Bezpośrednie kopiowanie bajtu 1:1, bez rzutowania i kombinowania
                         row_r[x] = pixel[0];
                         row_g[x] = pixel[1];
                         row_b[x] = pixel[2];

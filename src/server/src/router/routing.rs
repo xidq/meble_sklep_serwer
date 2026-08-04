@@ -135,7 +135,7 @@ pub fn build_router(state: AppState) -> Router {
             "/api/images/upload/{item_name_id}",
             post(sqlite_serv::foto::upload::handler_image_upload_to_server)
         )
-        .layer(DefaultBodyLimit::max(10 * 1024 * 1024))
+        .layer(DefaultBodyLimit::max(100 * 1024 * 1024))
         // rate limiter jest na innym serwerze, a komunikacja pomiędzy serwerami fajnie jakby była nie ograniczona
         // rate-limiter
         .layer(governor_layer)
