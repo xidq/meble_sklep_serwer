@@ -10,7 +10,7 @@ The server is responsible for core business logic, secure data persistence, fina
 
 ## Architecture & Key Capabilities
 
-- **HTTP & WebSocket Engine** – Built on Axum 0.8 and Tokio. Provides REST endpoints and real-time WebSocket communication.
+- **HTTPS & WebSocket Engine** – Built on Axum 0.8 and Tokio. Provides REST endpoints and real-time WebSocket communication.
 - **Three-Tier Authorization** – Enforces the final, most granular security and business-rule checks, serving as the ultimate access-control point behind the JS frontend and the Go intermediary.
 - **Dual SQLite Storage**
     - `rusqlite` (with `bundled-sqlcipher`) handles encrypted database operations.
@@ -111,7 +111,7 @@ A `.env` file in the project root is required. Example:
 DATABASE_URL=sqlite://data/data.db
 JWT_SECRET_KEY=your_secret_key_at_least_32_bytes
 FILES_URL=src/api/
-FRONTEND_SERVER=http://localhost:3000
+FRONTEND_SERVER=https://localhost:3000
 PEPPER_KEY=your_password_hash_pepper
 USERS_DB_ENCRYPTION_KEY=your_sqlcipher_db_key
 ```

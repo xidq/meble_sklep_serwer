@@ -8,3 +8,6 @@
 /*.sh
 /data/
 /.idea/
+*.pem
+*.lock
+/test_files/

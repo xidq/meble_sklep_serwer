@@ -9,7 +9,7 @@ use serde::{Deserialize, Deserializer, Serialize};
 use sha2::Sha512;
 use sqlx::FromRow;
 use strum::Display;
-use crate::PEPPER_KEY;
+use env_thingy::{OnceLockExt, PEPPER_KEY};
 
 #[derive(Deserialize)]
 pub struct RegisterRequest {
@@ -19,7 +19,8 @@ pub struct RegisterRequest {
     #[serde(default, deserialize_with = "empty_string_as_none")]
     pub email: Option<String>,
     #[serde(default, deserialize_with = "empty_string_as_none")]
-    pub name: Option<String>
+    pub name: Option<String>,
+    pub registration_conditions:bool,
 }
 fn empty_string_as_none<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
 where
@@ -28,11 +29,17 @@ where
     let opt: Option<String> = Option::deserialize(deserializer)?;
     Ok(opt.filter(|s| !s.trim().is_empty()))
 }
+#[derive(Deserialize)]
+pub struct PasswordChange{
+    pub old_password: String,
+    pub new_password: String,
+}
 #[derive(Clone, Serialize, Deserialize, FromRow, Debug)]
 pub struct User{
     pub id: i64,
     pub username: String,
     pub name: Option<String>,
+    pub surname: Option<String>,
     pub email: Option<String>,
 
     #[serde(skip_serializing)]
@@ -40,6 +47,30 @@ pub struct User{
 
     pub permission: UserRola,
     pub valid: bool,
+}
+#[derive(Clone, Serialize, Deserialize, FromRow, Debug)]
+pub struct UserList{
+    pub id: i64,
+    pub username: String,
+    pub permission: UserRola,
+    pub valid: bool,
+}
+#[derive(Clone, Serialize, Deserialize, FromRow, Debug)]
+pub struct Logowanie{
+    pub id: i64,
+    pub username: String,
+    pub name: Option<String>,
+    pub surname: Option<String>,
+    pub email: Option<String>,
+    pub permission: UserRola,
+    pub valid: bool,
+}
+#[derive(Clone, Serialize, Deserialize, FromRow, Debug)]
+pub struct UserData{
+    pub username: String,
+    pub name: Option<String>,
+    pub surname: Option<String>,
+    pub email: Option<String>,
 }
 #[derive(Serialize, Deserialize, Debug, Clone, Display, PartialEq)]
 #[derive(sqlx::Type)]
@@ -62,7 +93,7 @@ pub fn match_role(string: &str) -> UserRola{
 }
 
 fn pepper_password(plain_password: &str) -> String {
-    println!("pepper passoword start!!!");
+    // println!("pepper passoword start!!!");
 
     let mut mac = HmacSha512::new_from_slice(get_pepper_key())
         .expect("SimpleHmac bez problemu poradzi sobie z każdą długością klucza");
@@ -71,19 +102,20 @@ fn pepper_password(plain_password: &str) -> String {
     let result = mac.finalize();
 
     let bbb = hex::encode(result.into_bytes());
-    println!("pepper passowrd end!!!");
+    // println!("pepper passowrd end!!!");
     bbb
 }
 
 pub fn get_pepper_key() -> &'static [u8] {
     println!("pepper key!!!");
-    PEPPER_KEY.get().expect("PEPPER_KEY nie jest zainicjalizowany").as_bytes()
+    PEPPER_KEY.v("PEPPER_KEY nie jest zainicjalizowany").as_bytes()
     // std::env::var("PEPPER_KEY").expect("Brak PEPPER_KEY w .env")
 }
 impl User {
     pub fn new(
         username: impl Into<String>,
         name: Option<String>,
+        surname: Option<String>,
         email: Option<String>,
         password: impl Into<String>,
     ) -> Result<Self, bcrypt::BcryptError> {
@@ -96,6 +128,7 @@ impl User {
             id: 0, // nadpisywane przez db
             username: username.into(),
             name,
+            surname,
             email,
             password_hash,
             permission: UserRola::User,

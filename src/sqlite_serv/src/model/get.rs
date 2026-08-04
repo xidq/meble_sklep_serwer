@@ -1,4 +1,4 @@
-use crate::model::Model;
+use crate::model::{Model, ModelPayload};
 use crate::AppState;
 use axum::extract::State;
 use axum::Json;
@@ -79,3 +79,27 @@ pub async fn get_models_data_by_id(id: i64, pool: &SqlitePool) -> Result<Model, 
 //
 //     Ok(list)
 // }
+pub async fn handler_sync_models_json(
+    State(state): State<AppState>,
+) -> Result<(StatusCode, Json<Vec<ModelPayload>>), (StatusCode, String)> {
+
+    let modele = sqlx::query_as::<_, ModelPayload>(
+        "SELECT
+            name_id,
+            wood_qua AS wood,
+            metal_qua AS metal,
+            glass_qua AS glass
+        FROM products"
+    )
+        .fetch_all(&state.db)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Błąd zbierania danych z bazy: {:?}",e)))?;
+
+
+
+    Ok((
+        StatusCode::OK,
+        Json(modele),
+    ))
+
+}

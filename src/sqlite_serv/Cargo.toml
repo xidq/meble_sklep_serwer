@@ -10,11 +10,10 @@ axum = { workspace = true }
 http = { workspace = true }
 serde_json = { workspace = true }
 avif_image_handler = { path = "../avif_image_handler" }
-id_handling = { path = "../id_handling" }
+env_thingy = { path = "../env_thingy" }
 tokio = { workspace = true }
-axum-macros =  { workspace = true }
 anyhow = { workspace = true }
-reqwest = { workspace = true}
+reqwest = { workspace = true }
 chrono = { workspace = true }
 strum = { workspace = true }
 hmac = { workspace = true }
@@ -23,4 +22,3 @@ hex = { workspace = true }
 bcrypt = { workspace = true }
 regex = { workspace = true }
 jsonwebtoken = { workspace = true }
-rand = { workspace = true }

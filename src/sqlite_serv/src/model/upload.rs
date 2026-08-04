@@ -1,5 +1,7 @@
-use crate::model::Model;
-use crate::product::get::get_products_id_by_nameid;
+use crate::auth::sending_data::{files_send_to_server, json_send_to_server, RodzajeDanychJson};
+use crate::foto::get_items_prefix;
+use crate::model::{Model, ModelPayload};
+use crate::product::get::get_products_nameid_by_id;
 use crate::AppState;
 use axum::extract::{Multipart, State};
 use axum::Json;
@@ -7,23 +9,18 @@ use http::StatusCode;
 use serde_json::json;
 use sqlx::SqlitePool;
 use std::collections::BTreeMap;
-// use std::io::Read;
 use std::path::PathBuf;
 use tokio::io::AsyncWriteExt;
-use crate::auth::sending_data::{files_send_to_server, json_send_to_server, RodzajeDanychJson};
-use crate::foto::get_items_prefix;
-use crate::model::get::get_models_data_by_id;
-
+// todo!("ogarnąć zbieranie i wysyłanie danych o modelach 3d (wood,metal,glass) oraz ogarnąć bazę danych modeli o te elementy ;)")
 pub async fn handler_model_upload_to_server(
     State(state): State<AppState>,
-    axum::extract::Path(item_name_id): axum::extract::Path<String>, // Odczytujemy name_id z URL
+    axum::extract::Path(idx): axum::extract::Path<String>,
     mut multipart: Multipart,
 ) -> Result<(StatusCode, Json<serde_json::Value>), (StatusCode, String)> {
 
-    println!("Rozpoczęto ogarnianie modeli dla: {}", item_name_id);
-
-    // 1. Pobranie ID z obsługą błędu
-    let id = get_products_id_by_nameid(&item_name_id, &state.db)
+    println!("Rozpoczęto ogarnianie modeli dla: {}", idx);
+    let id = idx.as_str().parse::<i64>().unwrap();
+    let name_id = get_products_nameid_by_id(id, &state.db)
         .await
         .map_err(|e| {
             (
@@ -32,7 +29,7 @@ pub async fn handler_model_upload_to_server(
             )
         })?;
 
-    let base_path = format!("{}/products/{}/model", get_items_prefix(), item_name_id);
+    let base_path = format!("{}/products/{}/model", get_items_prefix(), name_id);
 
     // 2. Upewniamy się, że folder istnieje (asynchronicznie)
     tokio::fs::create_dir_all(&base_path)
@@ -48,7 +45,7 @@ pub async fn handler_model_upload_to_server(
     // Zbieramy ścieżki jako PathBuf, żeby nie martwić się o lifetimes
     let mut vec_sciezki_plikow: Vec<PathBuf> = Vec::new();
 
-    // 3. Zapisywanie plików
+
     while let Ok(Some(field)) = multipart.next_field().await {
         let file_name = field.file_name().unwrap_or("unknown").to_string();
         let path = std::path::Path::new(&base_path).join(&file_name);
@@ -62,9 +59,8 @@ pub async fn handler_model_upload_to_server(
         }
     }
 
-    // 4. Analiza zapisanych plików
+
     for path in &vec_sciezki_plikow {
-        // Bezpieczne wyciągnięcie rozszerzenia i nazwy pliku
         let extension = path.extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase();
         let file_name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
         let path_str = path.to_string_lossy().to_string();
@@ -90,32 +86,26 @@ pub async fn handler_model_upload_to_server(
         }
     }
 
+
+    let payload = get_model_stats_by_nameid(&name_id, &state.db).await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Błąd pobierania danych z bazy: {:?}", e)))?;
+
     // 5. Aktualizacja w bazie – UPSERT robimy RAZ po zebraniu wszystkich LOD-ów i tekstury!
     model_upsert_in_database(&state.db, &plik_modelu)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Błąd zapisu do bazy: {}", e)))?;
 
     // 6. Wysłanie plików na frontend server
-    files_send_to_server(&vec_sciezki_plikow, &item_name_id)
+    files_send_to_server(&vec_sciezki_plikow, &name_id)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Błąd wysyłania plików na frontend: {}", e)))?;
-    // let dane_json = json!({ /* Twoja struktura var_1, var_2 itd. */ });
-    // json_send_to_server(&item_name_id, dane_json, "img_front").await.map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Błąd wysyłania json na frontend: {}", e)))?;
 
-    // 2. Pobranie danych z bazy
-    let model_data = get_models_data_by_id(id, &state.db).await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+    let json_payload = serde_json::to_value(&payload)
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Błąd serializacji JSON: {:?}", e)))?;
 
-    // 3. Konwersja na JSON gotowy do wysyłki
-    // Dzięki #[serde(flatten)], serde_json zamieni strukturę na płaski obiekt:
-    // { "product_id": 1, "texture_ao": "...", "LOD0": "...", "LOD1": "..." }
-    let json_payload = serde_json::to_value(&model_data)
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    // 4. Wysyłka JSON-a (Twoja nowa funkcja)
-    json_send_to_server(&item_name_id, json_payload, RodzajeDanychJson::Models).await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e))?;
-    
+    json_send_to_server(&name_id, json_payload, RodzajeDanychJson::Models).await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Błąd wysyłki JSON: {:?}", e)))?;
     // Zwracamy czysty, czytelny JSON o sukcesie
     Ok((
         StatusCode::OK,
@@ -146,4 +136,22 @@ pub async fn model_upsert_in_database(pool: &SqlitePool, product: &Model) -> Res
         .await?;
 
     Ok(())
+}
+
+pub async fn get_model_stats_by_nameid(
+    name_id: &str,
+    pool: &SqlitePool,
+) -> Result<ModelPayload, sqlx::Error>{
+    let model = sqlx::query_as::<_, ModelPayload>(
+        "SELECT
+            name_id,
+            wood_qua AS wood,
+            metal_qua AS metal,
+            glass_qua AS glass
+        FROM products WHERE name_id = ?"
+    )
+        .bind(name_id)
+        .fetch_one(pool)
+        .await?;
+    Ok(model)
 }

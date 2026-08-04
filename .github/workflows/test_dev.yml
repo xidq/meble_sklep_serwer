@@ -61,7 +61,7 @@ jobs:
           DATABASE_URL: sqlite:data/data.db
           FILES_URL: src/api/
           JWT_SECRET_KEY: "super_tajny_klucz_testowy_dla_jwt_o_odpowiedniej_dlugosci_32_bajtow_minimum"
-          FRONTEND_SERVER: "http://localhost:3000"
+          FRONTEND_SERVER: "https://localhost:3000"
           PEPPER_KEY: "testowy_pepper_do_haszowania"
           USERS_DB_ENCRYPTION_KEY: "testowy_klucz_szyfrowania_bazy_sqlcipher_12345"
         run: cargo test

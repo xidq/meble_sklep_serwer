@@ -1,30 +1,35 @@
-use std::sync::Arc;
+use crate::websoc::websocet;
 use axum::extract::DefaultBodyLimit;
-use axum::http::header::{AUTHORIZATION, CONTENT_TYPE};
-use axum::http::Method;
-use axum::Router;
 use axum::routing::{get, post, put};
+use axum::Router;
+use sqlite_serv::AppState;
+use std::sync::Arc;
 use tower_governor::governor::GovernorConfigBuilder;
+use tower_governor::key_extractor::SmartIpKeyExtractor;
 use tower_governor::GovernorLayer;
 use tower_http::cors::{Any, CorsLayer};
-use sqlite_serv::AppState;
-use crate::websoc::websocet;
+use env_thingy::{OnceLockExt, GOVERNOR_BURST_SIZE, GOVERNOR_RATE_LIMIT};
 
 /// Function that handles routing from external server
 /// [GET, POST, PUT and DELETE]
 pub fn build_router(state: AppState) -> Router {
 
+    let rate_limit = if cfg!(test){2} else {*GOVERNOR_RATE_LIMIT.v("")};
+    let burst_size = if cfg!(test){5} else {*GOVERNOR_BURST_SIZE.v("")};
+
     let cors = CorsLayer::new()
         .allow_origin(Any)
-        // .allow_methods(Any)
-        // .allow_headers(Any);
-        .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE])
-        .allow_headers([AUTHORIZATION, CONTENT_TYPE]);
+        .allow_methods(Any)
+        .allow_headers(Any);
+        // .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE])
+        // .allow_headers([AUTHORIZATION, CONTENT_TYPE]);
 
     let governor_conf = Arc::new(
         GovernorConfigBuilder::default()
-            .per_second(2)
-            .burst_size(5)
+            .key_extractor(SmartIpKeyExtractor) // <-- tu
+            .per_second(rate_limit)
+            .burst_size(burst_size)
+            // .use_headers()
             .finish()
             .unwrap()
     );
@@ -32,29 +37,49 @@ pub fn build_router(state: AppState) -> Router {
     
     Router::new()
         .route(
+            "/",
+            get(test)
+        )
+        .route(
             "/usr/login",
             post(websocet::login_handler)
         )
         .route(
             "/usr/usr",
             post(sqlite_serv::user::post::handler_user_new)
-                .get(sqlite_serv::user::get::handler_get_user_own_data)
-                .delete(sqlite_serv::user::delete::handler_delete_user_by_user)
-                .put(sqlite_serv::user::put::handle_edit_user_by_user)
         )
         .route(
-            "/api/user/orders",
+            "/usr/self/orders",
             get(sqlite_serv::zamowienia::get::handler_get_user_orders)
+        )
+        .route(
+            "/usr/self/password",
+            put(sqlite_serv::user::put::handler_edit_user_password)
+        )
+        .route(
+            "/usr/self/data",
+            get(sqlite_serv::user::get::handler_get_user_profile) // todo!("ogarnąć rozpiździel w handlerach")
+                .put(sqlite_serv::user::put::handler_edit_user_profile)
+                .delete(sqlite_serv::user::delete::handler_delete_user_profile)
         )
         .route(
             "/admin/usr",
             post(sqlite_serv::user::post::handler_user_new)
-                .put(sqlite_serv::user::put::handle_edit_user)
+                .put(sqlite_serv::user::put::handle_admin_edit_user_data)
                 .get(sqlite_serv::user::get::handler_user_get_list)
         )
         .route(
-            "/admin/usr/{id}",
-            get(sqlite_serv::user::get::handler_get_user_data_by_id) //get user data
+            "/admin/orders",
+                get(sqlite_serv::zamowienia::get::handler_admin_get_order_lists)
+        )
+        .route(
+            "/admin/orders/{order_id}",
+                get(sqlite_serv::zamowienia::get::handler_admin_get_order_item_by_id)
+                    .put(sqlite_serv::zamowienia::put::handle_admin_edit_orders)
+        )
+        .route(
+            "/admin/usr/{name_id}",
+            get(sqlite_serv::user::get::handler_get_user_data_by_nameid) //get user data
                 .delete(sqlite_serv::user::delete::handler_delete_user_by_id)
             // .put(sqlite_serv::user::put::handle_edit_user) //nie trza id, jest caly user
             // .delete(sqlite_serv::user::delete::handler_delete_user_by_id)
@@ -75,20 +100,32 @@ pub fn build_router(state: AppState) -> Router {
                 .delete(sqlite_serv::product::delete::handler_delete_product_by_id)
         )
         .route(
-            "/api/models",
+            "/api/models/list",
             get(sqlite_serv::model::get::handler_get_models_list)
         )
         .route(
-            "/api/models/{id}",
+            "/api/models/data/{id}",
             get(sqlite_serv::model::get::handler_get_models_data_by_id)
         )
         .route(
-            "/api/models/upload",
-            get(sqlite_serv::model::upload::handler_model_upload_to_server)
+            "/api/models/upload/{id}",
+            post(sqlite_serv::model::upload::handler_model_upload_to_server)
         )
         .route(
-            "/ws",
-            get(websocet::ws_handler)
+            "/api/models/refresh/{id}",
+            post(sqlite_serv::model::post::handler_refresh_model_json_at_front)
+        )
+        .route(
+            "/api/models/refresh",
+            post(sqlite_serv::model::post::handler_refresh_all_models_json_at_front)
+        )
+        .route(
+            "/api/admin/sync/models",
+            get(sqlite_serv::model::get::handler_sync_models_json)
+        )
+        .route(
+            "/wss",
+            get(websocet::wss_handler)
         )
         .route(
             "/api/order",
@@ -96,7 +133,8 @@ pub fn build_router(state: AppState) -> Router {
         )
         .route(
             "/api/images/upload/{item_name_id}",
-            post(sqlite_serv::foto::upload::handler_image_upload_to_server))
+            post(sqlite_serv::foto::upload::handler_image_upload_to_server)
+        )
         .layer(DefaultBodyLimit::max(10 * 1024 * 1024))
         // rate limiter jest na innym serwerze, a komunikacja pomiędzy serwerami fajnie jakby była nie ograniczona
         // rate-limiter
@@ -104,4 +142,8 @@ pub fn build_router(state: AppState) -> Router {
         .layer(cors)
         .with_state(state)
 
+}
+
+async fn test() -> &'static str {
+    "no siema"
 }
