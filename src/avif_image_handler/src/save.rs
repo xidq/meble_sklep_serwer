@@ -1,5 +1,8 @@
 use image::DynamicImage;
-use libheif_rs::{Channel, ColorSpace, CompressionFormat, EncoderParameterValue, EncoderQuality, HeifContext, Image, LibHeif, RgbChroma};
+use libheif_rs::{
+    Channel, ColorSpace, CompressionFormat, EncoderParameterValue, EncoderQuality, HeifContext,
+    Image, LibHeif, RgbChroma
+};
 use std::fs::create_dir_all;
 use std::path::Path;
 
@@ -13,13 +16,9 @@ pub async fn avif_match(
 
     let wymiar = vec![2048, 1024, 512, 256, 128, 64, 32, 16];
     for x in wymiar {
-        let reskalowanie = img.resize(
-            x,
-            x,
-            image::imageops::FilterType::Lanczos3,
-        );
 
-        let nazwa_dodatkowa = match x{
+        let reskalowanie = img.resize( x, x, image::imageops::FilterType::Lanczos3);
+        let nazwa_dodatkowa = match x {
             2048 => "2048",
             1024 => "1024",
             512 => "512",
@@ -46,10 +45,18 @@ pub async fn avif_match(
                 .map_err(std::io::Error::other)?;
 
             //4 osobne płaszczyzny po 10 bitów każda
-            heif_img.create_plane(Channel::R, w, h, 8).expect("Plane R fail");
-            heif_img.create_plane(Channel::G, w, h, 8).expect("Plane G fail");
-            heif_img.create_plane(Channel::B, w, h, 8).expect("Plane B fail");
-            heif_img.create_plane(Channel::Alpha, w, h, 8).expect("Plane A fail");
+            heif_img
+                .create_plane(Channel::R, w, h, 8)
+                .expect("Plane R fail");
+            heif_img
+                .create_plane(Channel::G, w, h, 8)
+                .expect("Plane G fail");
+            heif_img
+                .create_plane(Channel::B, w, h, 8)
+                .expect("Plane B fail");
+            heif_img
+                .create_plane(Channel::Alpha, w, h, 8)
+                .expect("Plane A fail");
 
             {
                 let planes = heif_img.planes_mut();
@@ -87,34 +94,38 @@ pub async fn avif_match(
 
 
         let lib = LibHeif::new();
-        let mut context = HeifContext::new()
+        let mut context = HeifContext::new().map_err(std::io::Error::other)?;
+
+        let mut encoder = lib.encoder_for_format(kompresja).map_err(std::io::Error::other)?;
+
+        encoder.set_quality(qual).map_err(std::io::Error::other)?;
+
+        encoder
+            .set_parameter_value("chroma", EncoderParameterValue::String(chroma))
+            .ok();
+
+
+        encoder
+            .set_parameter_value("speed", EncoderParameterValue::Int(3))
+            .ok(); // 0-10 (wolniej = lepsza kompresja)
+        encoder
+            .set_parameter_value("tune", EncoderParameterValue::String("ssim".to_string()))
+            .ok(); // Optymalizacja pod jakość wizualną
+
+
+        context
+            .encode_image(&heif_img, &mut encoder, None)
             .map_err(std::io::Error::other)?;
 
-        let mut encoder = lib.encoder_for_format(kompresja)
-            .map_err(std::io::Error::other)?;
 
-        encoder.set_quality(qual)
-            .map_err(std::io::Error::other)?;
-
-        encoder.set_parameter_value("chroma", EncoderParameterValue::String(chroma)).ok();
-
-
-        encoder.set_parameter_value("speed", EncoderParameterValue::Int(3)).ok(); // 0-10 (wolniej = lepsza kompresja)
-        encoder.set_parameter_value("tune", EncoderParameterValue::String("ssim".to_string())).ok(); // Optymalizacja pod jakość wizualną
-
-
-        context.encode_image(&heif_img, &mut encoder, None).map_err(std::io::Error::other)?;
-
-
-        let final_bytes = context.write_to_bytes()
-            .map_err(std::io::Error::other)?;
+        let final_bytes = context.write_to_bytes().map_err(std::io::Error::other)?;
 
         let mut output_path = sciezka.to_path_buf();
 
         if !output_path.exists() {
             create_dir_all(output_path.clone())?;
         }
-        output_path.push(format!("{}_{}.avif",nazwa,nazwa_dodatkowa));
+        output_path.push(format!("{}_{}.avif", nazwa, nazwa_dodatkowa));
 
         std::fs::write(&output_path, &final_bytes)
             .map_err(|e| std::io::Error::other(format!("Błąd zapisu pliku: {}", e)))?;

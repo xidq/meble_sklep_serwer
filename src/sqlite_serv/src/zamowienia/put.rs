@@ -1,9 +1,9 @@
+use crate::AppState;
 use crate::auth::claims::Claims;
 use crate::auth::permissions::check_is_admin;
 use crate::zamowienia::{CaloscioweZamowienie, Pieniadze, Waluta};
-use crate::AppState;
-use axum::extract::State;
 use axum::Json;
+use axum::extract::State;
 use http::StatusCode;
 
 pub async fn handle_admin_edit_orders(
@@ -13,14 +13,20 @@ pub async fn handle_admin_edit_orders(
 ) -> Result<StatusCode, (StatusCode, String)> {
     println!("Odebrano żądanie zmiany zamowienia id: {}", zamowienie.dane.id);
 
-    // 1. Sprawdzenie uprawnień
     check_is_admin(&claims)?;
 
-    // 2. Przeliczenie kwot netto i VAT na strukturę Pieniadze (rozbicie na dziesiątki/grosze)
     let cena_pieniadze = Pieniadze::new(zamowienie.dane.cena, Waluta::Pln);
     let vat_pieniadze = Pieniadze::new(zamowienie.dane.vat, Waluta::Pln);
 
-    // 3. Wykonanie Zapytania UPDATE z prawidłowymi bindami
+    // let dane = &zamowienie.dane;
+    // let f_dane = dane.faktura_dane.as_ref();
+    // let transport = dane.transport.as_ref();
+    // let f_nazwa = f_dane.map(|f| &f.nazwa_firmy);
+    // let f_nip = f_dane.map(|f| &f.nip);
+    // let f_ulica = f_dane.and_then(|f| f.ulica.as_deref());
+    // let f_miasto = f_dane.and_then(|f| f.miasto.as_deref());
+    // let f_kod = f_dane.and_then(|f| f.kod_pocztowy.as_deref());
+
     sqlx::query(
         r#"
         UPDATE orders

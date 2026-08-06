@@ -1,5 +1,5 @@
-use std::io::Cursor;
 use image::{DynamicImage, ImageReader};
+use std::io::Cursor;
 /// # Decoding unknown
 /// Trying to guess what's the format.
 /// 
@@ -16,13 +16,12 @@ pub fn unknown(bajty: &[u8]) -> Result<DynamicImage, std::io::Error> {
     if reader.format().is_none() {
         return Err(std::io::Error::new(
             std::io::ErrorKind::Unsupported,
-            "Nie rozpoznano formatu pliku (brak znanej sygnatury)"
+            "Nie rozpoznano formatu pliku (brak znanej sygnatury)",
         ));
     }
 
     // Dekodowanie do DynamicImage
-    let obraz = reader.decode()
-        .map_err(std::io::Error::other)?;
+    let obraz = reader.decode().map_err(std::io::Error::other)?;
 
     // Dla nieznanych formatów trudno o generyczne wyciąganie ICC/EXIF bez matchowania,
     // więc zwracamy None.

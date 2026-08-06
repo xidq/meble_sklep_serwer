@@ -43,6 +43,5 @@ pub fn ff(bajty: &[u8]) -> Result<DynamicImage, std::io::Error> {
     let buf = ImageBuffer::<Rgba<u8>, _>::from_raw(width, height, rgba8_pixels)
         .ok_or_else(|| std::io::Error::other("Błąd tworzenia bufora RGBA8 z Farbfeld"))?;
 
-
     Ok(DynamicImage::ImageRgba8(buf))
 }

@@ -1,6 +1,6 @@
-use std::io;
 use image::{DynamicImage, ImageBuffer, Rgb, Rgba};
 use libheif_rs::{ColorSpace, HeifContext, LibHeif, RgbChroma};
+use std::io;
 /// # Avif decoding
 /// Using libheif, mean... Somewhat wrapping...
 /// 
@@ -9,36 +9,40 @@ use libheif_rs::{ColorSpace, HeifContext, LibHeif, RgbChroma};
 /// Put data from avif to get image, and exif, and color profile...
 /// 
 /// nice, right?
-pub fn avif(bajty: &[u8]) -> Result<DynamicImage, std::io::Error>{
+pub fn avif(bajty: &[u8]) -> Result<DynamicImage, std::io::Error> {
     let lib_heif = LibHeif::new();
-    let ctx = HeifContext::read_from_bytes(bajty)
-        .map_err(std::io::Error::other)?;
-    let handle = ctx.primary_image_handle()
-        .map_err(std::io::Error::other)?;
+    let ctx = HeifContext::read_from_bytes(bajty).map_err(std::io::Error::other)?;
+    let handle = ctx.primary_image_handle().map_err(std::io::Error::other)?;
 
     let has_alpha = handle.has_alpha_channel();
     let bit_depth = handle.luma_bits_per_pixel();
 
     let (chroma, bytes_per_channel) = if bit_depth > 8 {
-        if has_alpha { (RgbChroma::HdrRgbaBe, 2) } else { (RgbChroma::HdrRgbBe, 2) }
+        if has_alpha {
+            (RgbChroma::HdrRgbaBe, 2)
+        } else {
+            (RgbChroma::HdrRgbBe, 2)
+        }
     } else {
-        if has_alpha { (RgbChroma::Rgba, 1) } else { (RgbChroma::Rgb, 1) }
+        if has_alpha {
+            (RgbChroma::Rgba, 1)
+        } else {
+            (RgbChroma::Rgb, 1)
+        }
     };
 
-    let image = lib_heif.decode(
-        &handle,
-        ColorSpace::Rgb(chroma),
-        None,
-    ).map_err(std::io::Error::other)?;
+    let image = lib_heif
+        .decode(&handle, ColorSpace::Rgb(chroma), None)
+        .map_err(std::io::Error::other)?;
 
     let width = image.width() as usize;
     let height = image.height() as usize;
     let channels = if has_alpha { 4 } else { 3 };
 
     let planes = image.planes();
-    let interleaved = planes.interleaved.ok_or_else(|| {
-        std::io::Error::other("Brak danych interleaved")
-    })?;
+    let interleaved = planes
+        .interleaved
+        .ok_or_else(|| {std::io::Error::other("Brak danych interleaved")})?;
 
     let data = interleaved.data;
     let stride = interleaved.stride;
@@ -61,11 +65,19 @@ pub fn avif(bajty: &[u8]) -> Result<DynamicImage, std::io::Error>{
             .collect();
 
         if has_alpha {
-            let buf = ImageBuffer::<Rgba<u16>, _>::from_raw(width as u32, height as u32, data_u16)
+            let buf = ImageBuffer::<Rgba<u16>, _>::from_raw(
+                width as u32,
+                height as u32,
+                data_u16,
+            )
                 .ok_or_else(|| io::Error::other("Błąd tworzenia bufora Rgba16a"))?;
             DynamicImage::ImageRgba16(buf)
         } else {
-            let buf = ImageBuffer::<Rgb<u16>, _>::from_raw(width as u32, height as u32, data_u16)
+            let buf = ImageBuffer::<Rgb<u16>, _>::from_raw(
+                width as u32,
+                height as u32,
+                data_u16,
+            )
                 .ok_or_else(|| io::Error::other("Błąd tworzenia bufora Rgb16"))?;
             DynamicImage::ImageRgb16(buf)
         }

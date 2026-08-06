@@ -3,7 +3,9 @@ use crate::wczytywanie::main_wczytywanie::ImgExtTag;
 /// # Check format
 /// Checkin' format for further decoding
 pub fn rozpoznaj_format(bajty: &[u8]) -> ImgExtTag {
-    if bajty.len() < 12 { return ImgExtTag::Unknown; }
+    if bajty.len() < 12 {
+        return ImgExtTag::Unknown;
+    }
 
     let typ = match &bajty[0..12] {
         [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, ..] => ImgExtTag::Png,
@@ -31,7 +33,9 @@ pub fn rozpoznaj_format(bajty: &[u8]) -> ImgExtTag {
 /// Due to tga format philosophy we're checking if that's it.
 fn jest_tga(bajty: &[u8]) -> bool {
     let len = bajty.len();
-    if len < 18 { return false; }
+    if len < 18 {
+        return false;
+    }
 
     // stopka (TGA 2.0) - szukamy "TRUEVISION-XFILE."
     // Stopka zaczyna się 26 bajtów przed końcem

@@ -56,6 +56,15 @@ jobs:
           cargo install sqlx-cli --no-default-features --features sqlite
           sqlx migrate run --source migrations/data --database-url sqlite:data/data.db
 
+      - name: run-clippy
+        run: |
+#          warnings wsio idzie jako error
+          cargo clippy -- -D
+
+      - name: run-audit
+        run: |
+          cargo audit
+
       - name: Run tests
         env:
           DATABASE_URL: sqlite:data/data.db

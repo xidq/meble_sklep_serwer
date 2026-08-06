@@ -96,7 +96,7 @@ pub async fn handle_put_order_new(
 pub async fn put_order_new(
     pool: &SqlitePool,
     new_order: &Zamowienie<Pieniadze>,
-    items: &[ZamowieniePozycja<Pieniadze>]
+    items: &[ZamowieniePozycja<Pieniadze>],
 ) -> Result<(), sqlx::Error> {
     // Rozpocznij transakcję
     let mut tx = pool.begin().await?;
@@ -146,13 +146,13 @@ pub async fn put_order_new(
     println!("przeszło przez querry");
     let order_id = result.last_insert_rowid();
 
-    // 2. Wstawienie pozycji (pętla)
+    // Wstawienie pozycji (pętla)
     for item in items {
         sqlx::query(
             "INSERT INTO orders_things (
                            zamowienie_id, product_id, ilosc,
                            cena_dziesiatki,cena_grosze, vat_dziesiatki, vat_grosze, waluta,
-                           konfiguracja) VALUES (?, ?, ?, ?, ?, ?,? ,? ,?)"
+                           konfiguracja) VALUES (?, ?, ?, ?, ?, ?,? ,? ,?)",
         )
             .bind(order_id)
             .bind(item.product_id)

@@ -12,7 +12,8 @@ pub fn tga(bajty: &Vec<u8>) -> Result<DynamicImage, std::io::Error> {
     let color_type = decoder.color_type();
 
     let mut pixels = vec![0u8; decoder.total_bytes() as usize];
-    decoder.read_image(&mut pixels)
+    decoder
+        .read_image(&mut pixels)
         .map_err(std::io::Error::other)?;
 
     let obraz = match color_type {
@@ -20,7 +21,7 @@ pub fn tga(bajty: &Vec<u8>) -> Result<DynamicImage, std::io::Error> {
             let buf = ImageBuffer::<image::Luma<u8>, _>::from_raw(width, height, pixels)
                 .ok_or_else(|| std::io::Error::other("Błąd bufora TGA L8"))?;
             DynamicImage::ImageLuma8(buf)
-        },
+        }
         ColorType::Rgb8 => {
             // TgaDecoder w 'image' zazwyczaj już zamienił BGR -> RGB dla Rgb8.
             // Ale jeśli obrazy wychodzą niebieskie, tutaj należałoby zrobić swap.
@@ -30,7 +31,7 @@ pub fn tga(bajty: &Vec<u8>) -> Result<DynamicImage, std::io::Error> {
             let buf = ImageBuffer::<image::Rgb<u8>, _>::from_raw(width, height, pixels)
                 .ok_or_else(|| std::io::Error::other("Błąd bufora TGA RGB8"))?;
             DynamicImage::ImageRgb8(buf)
-        },
+        }
         ColorType::Rgba8 => {
 
             // Ręczny swap BGRA -> RGBA
@@ -41,7 +42,7 @@ pub fn tga(bajty: &Vec<u8>) -> Result<DynamicImage, std::io::Error> {
             let buf = ImageBuffer::<image::Rgba<u8>, _>::from_raw(width, height, pixels)
                 .ok_or_else(|| std::io::Error::other("Błąd bufora TGA RGBA8"))?;
             DynamicImage::ImageRgba8(buf)
-        },
+        }
         // Obsługa 16-bit (5-5-5-1)
         _ if pixels.len() == (width * height * 2) as usize => {
             let mut rgb8_pixels = Vec::with_capacity((width * height * 3) as usize);
@@ -60,8 +61,13 @@ pub fn tga(bajty: &Vec<u8>) -> Result<DynamicImage, std::io::Error> {
             let buf = ImageBuffer::<image::Rgb<u8>, _>::from_raw(width, height, rgb8_pixels)
                 .ok_or_else(|| std::io::Error::other("Błąd konwersji TGA 16->RGB8"))?;
             DynamicImage::ImageRgb8(buf)
-        },
-        _ => return Err(std::io::Error::new(std::io::ErrorKind::Unsupported, format!("Nieobsługiwany ColorType TGA: {:?}", color_type))),
+        }
+        _ => {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::Unsupported,
+                format!("Nieobsługiwany ColorType TGA: {:?}", color_type)
+            ));
+        }
     };
 
     Ok(obraz)

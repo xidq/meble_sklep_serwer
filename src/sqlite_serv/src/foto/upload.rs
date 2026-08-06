@@ -11,7 +11,7 @@ use serde_json::json;
 use sqlx::SqlitePool;
 use std::collections::BTreeMap;
 use std::path::PathBuf;
-use tokio::io::AsyncWriteExt;
+// use tokio::io::AsyncWriteExt;
 use crate::foto::get::get_image_data_by_id;
 
 pub async fn handler_image_upload_to_server(
@@ -58,7 +58,7 @@ pub async fn handler_image_upload_to_server(
                         println!("    Pobrano {} bajtów dla {}. Zapisuję na dysk...", data.len(), file_name);
                         match tokio::fs::File::create(&path).await {
                             Ok(mut file) => {
-                                use tokio::io::AsyncWriteExt; // Upewnij się, że masz ten import na górze pliku lub użyj go tak
+                                use tokio::io::AsyncWriteExt;
                                 if let Err(e) = file.write_all(&data).await {
                                     eprintln!("[BŁĄD] Nie można zapisać danych do pliku {:?}: {}", path, e);
                                 } else {

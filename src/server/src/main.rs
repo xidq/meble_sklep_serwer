@@ -1,25 +1,28 @@
+pub mod register;
 pub mod requests;
 pub mod response;
-pub mod register;
-pub mod websoc;
-mod tests;
 mod router;
+mod tests;
+pub mod websoc;
 
 use crate::router::routing::build_router;
 use axum_server::tls_rustls::RustlsConfig;
-use env_thingy::{OnceLockExt, CURRENT_ADDRESS, CURRENT_PORT, DATABASE_URL, FILES_LOCATION, FRONT_SERV_ADDRESS, GOVERNOR_BURST_SIZE, GOVERNOR_RATE_LIMIT, JWT_SECRET, PEPPER_KEY, TLS_CERT_PATH, TLS_KEY_PATH};
+use colored::Colorize;
+use env_thingy::{
+    CURRENT_ADDRESS, CURRENT_PORT, DATABASE_URL, FILES_LOCATION, FRONT_SERV_ADDRESS,
+    GOVERNOR_BURST_SIZE, GOVERNOR_RATE_LIMIT, JWT_SECRET, OnceLockExt, PEPPER_KEY, TLS_CERT_PATH,
+    TLS_KEY_PATH,
+};
 use sqlite_serv::AppState;
 use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions};
 use std::net::SocketAddr;
 use std::str::FromStr;
 use tokio::io::AsyncBufReadExt;
 use tokio::sync::broadcast;
-use colored::Colorize;
 
 /// Main fn of such server
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>>{
-
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     load_env_data()?;
 
     let db_url = DATABASE_URL.v("");
@@ -44,13 +47,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
     println!("Uruchamianie migracji dla bazy danych...");
     sqlx::migrate!("../../migrations/data").run(&pool).await?;
 
-    println!("{}","Wszystkie bazy danych zostały pomyślnie zsynchronizowane!".green());
+    println!(
+        "{}",
+        "Wszystkie bazy danych zostały pomyślnie zsynchronizowane!".green()
+    );
     println!("{}","Migracje zakończone sukcesem.".green());
 
     let (ws_broadcast_tx, _) = broadcast::channel::<String>(16);
 
 
-    let state = AppState { /* tx ,*/ db: pool , ws_broadcast_tx};
+    let state = AppState {
+        /* tx ,*/ db: pool,
+        ws_broadcast_tx
+    };
 
     let app = build_router(state);
 
@@ -59,19 +68,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
 
     let addr = if cfg!(docker) {
         let addr_str = format!("0.0.0.0:{}", rust_port);
-        SocketAddr::from_str(&addr_str)
-            .unwrap_or_else(|_| SocketAddr::from(([0, 0, 0, 0], 8080)))
+        SocketAddr::from_str(&addr_str).unwrap_or_else(|_| SocketAddr::from(([0, 0, 0, 0], 8080)))
     } else {
         let addr_str = format!("{}:{}", rust_address, rust_port);
-        SocketAddr::from_str(&addr_str)
-            .unwrap_or_else(|_| SocketAddr::from(([0, 0, 0, 0], 8080)))
+        SocketAddr::from_str(&addr_str).unwrap_or_else(|_| SocketAddr::from(([0, 0, 0, 0], 8080)))
     };
 
-    let config = RustlsConfig::from_pem_file(TLS_CERT_PATH.v(""),TLS_KEY_PATH.v("")).await?;
+    let config = RustlsConfig::from_pem_file(TLS_CERT_PATH.v(""), TLS_KEY_PATH.v("")).await?;
 
     println!("Serwer działa na https://{}", addr);
 
-    println!("Write '{}' or press {}, to shut down such server.", "exit".bold().blue(), "Ctrl+C".bold().blue());
+    println!(
+        "Write '{}' or press {}, to shut down such server.",
+        "exit".bold().blue(),
+        "Ctrl+C".bold().blue()
+    );
     println!("\n------------------------------\n");
 
     // Zadanie nasłuchujące na konsolę
@@ -83,18 +94,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
         while let Ok(Some(line)) = lines.next_line().await {
             let trimmed = line.trim();
             if trimmed.eq_ignore_ascii_case("exit") || trimmed.eq_ignore_ascii_case("stop") {
-                println!("{}", "Otrzymano komendę z konsoli. Zamykanie serwera...".yellow());
+                println!(
+                    "{}",
+                    "Otrzymano komendę z konsoli. Zamykanie serwera...".yellow()
+                );
                 break;
             } else {
-                println!("Nieznana komenda: '{}'. Wpisz 'exit', aby wyłączyć.", trimmed);
+                println!(
+                    "Nieznana komenda: '{}'. Wpisz 'exit', aby wyłączyć.",
+                    trimmed
+                );
             }
         }
     };
 
     // Zadanie nasłuchujące na Ctrl+C
     let ctrl_c_future = async {
-        tokio::signal::ctrl_c().await.expect("Nie udało się nasłuchiwać sygnału Ctrl+C");
-        println!("\n{}", "Otrzymano sygnał Ctrl+C. Zamykanie serwera...".yellow());
+        tokio::signal::ctrl_c()
+            .await
+            .expect("Nie udało się nasłuchiwać sygnału Ctrl+C");
+        println!(
+            "\n{}",
+            "Otrzymano sygnał Ctrl+C. Zamykanie serwera...".yellow()
+        );
     };
 
     // Odpalony axum w tle, główne wątki/future pilnują sygnału zamknięcia
@@ -111,45 +133,62 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>{
     Ok(())
 }
 /// Initialize secrets
-fn load_env_data() -> anyhow::Result<()>{
-
+fn load_env_data() -> anyhow::Result<()> {
     dotenvy::dotenv()?;
     
     println!("{}", "Loading Environment Data...".bold().blue());
     let pepper_key = std::env::var("PEPPER_KEY")?;
-    PEPPER_KEY.set(pepper_key).map_err(|e| anyhow::anyhow!("Nie udało się zainicjalizować PEPPER_KEY: {}",e))?;
+    PEPPER_KEY
+        .set(pepper_key)
+        .map_err(|e| anyhow::anyhow!("Nie udało się zainicjalizować PEPPER_KEY: {}",e))?;
     println!("PEPPER_KEY: {}", "Ok!".bold().green());
 
     let files_location = std::env::var("FILES_URL")?;
-    FILES_LOCATION.set(files_location).map_err(|e| anyhow::anyhow!("Nie udało się zainicjalizować FILES_LOCATION: {}", e))?;
+    FILES_LOCATION
+        .set(files_location)
+        .map_err(|e| anyhow::anyhow!("Nie udało się zainicjalizować FILES_LOCATION: {}", e))?;
     println!("FILES_URL: {}", "Ok".bold().green());
 
     let front_serv_port = std::env::var("CURRENT_RUST_SERVER_PORT")?;
-    CURRENT_PORT.set(front_serv_port).map_err(|e| anyhow::anyhow!("Nie udało się zainicjalizować CURRENT_PORT: {}",e))?;
+    CURRENT_PORT
+        .set(front_serv_port)
+        .map_err(|e| anyhow::anyhow!("Nie udało się zainicjalizować CURRENT_PORT: {}",e))?;
     println!("CURRENT_RUST_SERVER_PORT: {}", "Ok".bold().green());
 
     let front_serv_address = std::env::var("CURRENT_RUST_SERVER_ADRES")?;
-    CURRENT_ADDRESS.set(front_serv_address).map_err(|e| anyhow::anyhow!("Nie udało się zainicjalizować CURRENT_ADDRESS: {}",e))?;
+    CURRENT_ADDRESS
+        .set(front_serv_address)
+        .map_err(|e| anyhow::anyhow!("Nie udało się zainicjalizować CURRENT_ADDRESS: {}",e))?;
     println!("CURRENT_RUST_SERVER_ADRES: {}", "Ok".bold().green());
 
     let front_serv = std::env::var("FRONTEND_SERVER")?;
-    FRONT_SERV_ADDRESS.set(front_serv).map_err(|e| anyhow::anyhow!("Nie udało się zainicjalizować FRONT_SERV_ADRESS: {}",e))?;
+    FRONT_SERV_ADDRESS
+        .set(front_serv)
+        .map_err(|e| anyhow::anyhow!("Nie udało się zainicjalizować FRONT_SERV_ADRESS: {}",e))?;
     println!("FRONTEND_SERVER: {}", "Ok".bold().green());
 
     let jwt = std::env::var("JWT_SECRET_KEY")?;
-    JWT_SECRET.set(jwt.into_bytes()).map_err(|e| anyhow::anyhow!("Nie udało się zainicjalizować JWT_SECRET: {:?}",e))?;
+    JWT_SECRET
+        .set(jwt.
+            into_bytes()).map_err(|e| anyhow::anyhow!("Nie udało się zainicjalizować JWT_SECRET: {:?}",e))?;
     println!("JWT_SECRET_KEY: {}", "Ok".bold().green());
 
     let database = std::env::var("DATABASE_URL")?;
-    DATABASE_URL.set(database).map_err(|e| anyhow::anyhow!("Nie udało się zainicjalizować DATABASE_URL: {}",e))?;
+    DATABASE_URL
+        .set(database)
+        .map_err(|e| anyhow::anyhow!("Nie udało się zainicjalizować DATABASE_URL: {}",e))?;
     println!("DATABASE_URL: {}", "Ok".bold().green());
 
     let cert = std::env::var("RUST_TLS_CERT")?;
-    TLS_CERT_PATH.set(cert).map_err(|e| anyhow::anyhow!("Nie udało się zainicjalizować TLS_CERT_PATH: {}",e))?;
+    TLS_CERT_PATH
+        .set(cert)
+        .map_err(|e| anyhow::anyhow!("Nie udało się zainicjalizować TLS_CERT_PATH: {}",e))?;
     println!("RUST_TLS_CERT: {}", "Ok".bold().green());
 
     let key = std::env::var("RUST_TLS_KEY")?;
-    TLS_KEY_PATH.set(key).map_err(|e| anyhow::anyhow!("Nie udało się zainicjalizować TLS_KEY_PATH: {}",e))?;
+    TLS_KEY_PATH
+        .set(key)
+        .map_err(|e| anyhow::anyhow!("Nie udało się zainicjalizować TLS_KEY_PATH: {}",e))?;
     println!("RUST_TLS_KEY: {}", "Ok".bold().green());
 
     let burst = std::env::var("GOV_BURST_SIZE")?;
@@ -160,7 +199,9 @@ fn load_env_data() -> anyhow::Result<()>{
             5_u32
         }
     };
-    GOVERNOR_BURST_SIZE.set(burst_parse).map_err(|e| anyhow::anyhow!("Nie udało się zainicjalizować GOVERNOR_BURST_SIZE: {}",e))?;
+    GOVERNOR_BURST_SIZE
+        .set(burst_parse)
+        .map_err(|e| anyhow::anyhow!("Nie udało się zainicjalizować GOVERNOR_BURST_SIZE: {}",e))?;
     println!("GOV_BURST_SIZE: {}", "Ok".bold().green());
 
 
@@ -173,7 +214,8 @@ fn load_env_data() -> anyhow::Result<()>{
             2_u64
         }
     };
-    GOVERNOR_RATE_LIMIT.set(rate_limit_parse)
+    GOVERNOR_RATE_LIMIT
+        .set(rate_limit_parse)
         .map_err(|e| anyhow::anyhow!("Nie udało się zainicjalizować GOV_RATE_LIMIT: {}",e))?;
     println!("GOV_RATE_LIMIT: {}", "Ok".bold().green());
 
