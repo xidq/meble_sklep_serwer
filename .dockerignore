@@ -13,6 +13,7 @@ db_data/
 .git/
 .env
 data/
+*.lock
 
 # Jeśli masz tam jakieś pliki frontendowe/node
 src/api/

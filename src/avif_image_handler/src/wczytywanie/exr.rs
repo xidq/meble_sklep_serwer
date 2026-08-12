@@ -13,7 +13,8 @@ pub fn exr_loading(bajty: &[u8]) -> std::result::Result<DynamicImage, std::io::E
         .no_deep_data()
         .largest_resolution_level()
         .all_channels()                     // wczytaj wszystkie kanały bez narzucania ich typu
-        .all_layers().all_attributes()      // wszystkie warstwy + atrybuty
+        .all_layers()
+        .all_attributes()      // wszystkie warstwy + atrybuty
         .from_buffered(kursor)
         .map_err(|e| std::io::Error::other(format!("Błąd dekodowania EXR: {}", e)))?;
 
@@ -35,7 +36,7 @@ pub fn exr_loading(bajty: &[u8]) -> std::result::Result<DynamicImage, std::io::E
     let mut b_samples = None;
     let mut a_samples = None;
 
-    for channel in &channels.list {   // &Vec<AnyChannel<FlatSamples>> → możemy pożyczyć
+    for channel in &channels.list {
         let r = Text::from("R");
         let g = Text::from("G");
         let b = Text::from("B");
@@ -44,7 +45,7 @@ pub fn exr_loading(bajty: &[u8]) -> std::result::Result<DynamicImage, std::io::E
         match channel.name.clone() {
             name if name == r => r_samples = Some(&channel.sample_data),
             name if name == g => g_samples = Some(&channel.sample_data),
-            name if name == b  => b_samples = Some(&channel.sample_data),
+            name if name == b => b_samples = Some(&channel.sample_data),
             name if name == a => a_samples = Some(&channel.sample_data),
             _ => {}
         }
@@ -59,7 +60,7 @@ pub fn exr_loading(bajty: &[u8]) -> std::result::Result<DynamicImage, std::io::E
 
 
     let num_pixels = (width * height) as usize;
-    let mut rgba_f32 = vec![0.0f32; num_pixels * 4];   // tymczasowy bufor f32
+    let mut rgba_f32 = vec![0.0f32; num_pixels * 4]; // tymczasowy bufor f32
 
     // Funkcja kopiująca dane kanału do bufora RGBA (składowa: 0=R, 1=G, 2=B, 3=A)
     /// Copy data into RGBA channel
@@ -92,15 +93,17 @@ pub fn exr_loading(bajty: &[u8]) -> std::result::Result<DynamicImage, std::io::E
     if let Some(a_samples) = a {
         copy_channel(a_samples, &mut rgba_f32, 3, num_pixels);
     } else {
-        // jeśli brak kanału alfa – ustaw 1.0
-        rgba_f32.iter_mut().skip(3).step_by(4).for_each(|v| *v = 1.0);
+        // jeśli brak kanału alfa – ustawić 1.0
+        rgba_f32
+            .iter_mut()
+            .skip(3)
+            .step_by(4)
+            .for_each(|v| *v = 1.0);
     }
 
     // Tworzymy DynamicImage w zależności od oryginalnej głębi bitowej
     let bufor = Rgba32FImage::from_raw(width, height, rgba_f32)
         .ok_or_else(|| std::io::Error::other("Nie udało się utworzyć Rgba32FImage"))?;
-
-
 
     Ok(DynamicImage::ImageRgba32F(bufor))
 }

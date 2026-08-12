@@ -4,18 +4,21 @@ use std::io::Cursor;
 
 /// # Decoding jpg
 pub fn jpeg(bajty: &Vec<u8>) -> Result<DynamicImage, std::io::Error> {
-
     let mut decoder = Decoder::new(Cursor::new(bajty));
-    let pixels = decoder.decode()
-        .map_err(std::io::Error::other)?;
+    let pixels = decoder.decode().map_err(std::io::Error::other)?;
 
-    let info = decoder.info()
+    let info = decoder
+        .info()
         .ok_or_else(|| std::io::Error::other( "Brak info o pliku"))?;
 
 
     let obraz = match info.pixel_format {
         jpeg_decoder::PixelFormat::L8 => {
-            let buf = ImageBuffer::<image::Luma<u8>, _>::from_raw(info.width as u32, info.height as u32, pixels)
+            let buf = ImageBuffer::<image::Luma<u8>, _>::from_raw(
+                info.width as u32,
+                info.height as u32,
+                pixels,
+            )
                 .ok_or_else(|| std::io::Error::other("Błąd bufora L8"))?;
             DynamicImage::ImageLuma8(buf)
         },
@@ -24,12 +27,20 @@ pub fn jpeg(bajty: &Vec<u8>) -> Result<DynamicImage, std::io::Error> {
             let data_u16: Vec<u16> = pixels.chunks_exact(2)
                 .map(|c| u16::from_be_bytes([c[0], c[1]]))
                 .collect();
-            let buf = ImageBuffer::<image::Luma<u16>, _>::from_raw(info.width as u32, info.height as u32, data_u16)
+            let buf = ImageBuffer::<image::Luma<u16>, _>::from_raw(
+                info.width as u32,
+                info.height as u32,
+                data_u16,
+            )
                 .ok_or_else(|| std::io::Error::other("Błąd bufora L16"))?;
             DynamicImage::ImageLuma16(buf)
         },
         jpeg_decoder::PixelFormat::RGB24 => {
-            let buf = ImageBuffer::<image::Rgb<u8>, _>::from_raw(info.width as u32, info.height as u32, pixels)
+            let buf = ImageBuffer::<image::Rgb<u8>, _>::from_raw(
+                info.width as u32,
+                info.height as u32,
+                pixels,
+            )
                 .ok_or_else(|| std::io::Error::other("Błąd bufora RGB24"))?;
             DynamicImage::ImageRgb8(buf)
         },
@@ -57,11 +68,14 @@ pub fn jpeg(bajty: &Vec<u8>) -> Result<DynamicImage, std::io::Error> {
                 rgb_pixels.push(b.round() as u8);
             }
 
-            let buf = ImageBuffer::<image::Rgb<u8>, _>::from_raw(info.width as u32, info.height as u32, rgb_pixels)
+            let buf = ImageBuffer::<image::Rgb<u8>, _>::from_raw(
+                info.width as u32,
+                info.height as u32,
+                rgb_pixels,
+            )
                 .ok_or_else(|| std::io::Error::other("Błąd bufora RGB z CMYK"))?;
             DynamicImage::ImageRgb8(buf)
-            // return Err(std::io::Error::new(std::io::ErrorKind::Unsupported, "CMYK32 nie jest bezpośrednio wspierany przez DynamicImage"));
-        },
+        }
     };
 
     Ok(obraz)

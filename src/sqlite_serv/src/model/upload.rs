@@ -31,16 +31,38 @@ pub async fn handler_model_upload_to_server(
 
     let base_path = format!("{}/products/{}/model", get_items_prefix(), name_id);
 
-    // 2. Upewniamy się, że folder istnieje (asynchronicznie)
+    let scale: Option<f64> = sqlx::query_scalar(
+        "SELECT texture_scale FROM models WHERE product_id = ?"
+    )
+        .bind(id)
+        .fetch_optional(&state.db)
+        .await
+        .map_err(|e| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                format!("Błąd pobierania skali przedmiotu z bazy: {}", e),
+            )
+        })?;
+
+    // Upewniamy się, że folder istnieje (asynchronicznie)
     tokio::fs::create_dir_all(&base_path)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Błąd tworzenia folderu: {}", e)))?;
 
-    let mut plik_modelu = Model {
+    let existing_model: Option<Model> = sqlx::query_as::<_, Model>(
+        "SELECT product_id, texture_ao, model, texture_scale FROM models WHERE product_id = ?"
+    )
+        .bind(id)
+        .fetch_optional(&state.db)
+        .await
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Błąd pobierania modelu z bazy: {}", e)))?;
+
+    let mut plik_modelu = existing_model.unwrap_or_else(|| Model {
         product_id: id,
         texture_ao: None,
         model: BTreeMap::new(),
-    };
+        texture_scale: scale.unwrap_or(1.0),
+    });
 
     // Zbieramy ścieżki jako PathBuf, żeby nie martwić się o lifetimes
     let mut vec_sciezki_plikow: Vec<PathBuf> = Vec::new();
@@ -72,11 +94,17 @@ pub async fn handler_model_upload_to_server(
             "glb" => {
                 // Szukamy członu zawierającego 'LOD' (wielkość liter ignorowana)
                 // Np. nazwa "krzeslo_LOD1_wersja2.glb" -> wyciągnie "LOD1"
+                // let lod_lvl = file_name
+                //     .split('_')
+                //     .find(|part| part.to_uppercase().contains("LOD"))
+                //     .map(|s| s.split('.').next().unwrap_or(s).to_uppercase()) // Usuwamy kropkę z rozszerzeniem, jeśli LOD jest na końcu
+                //     .unwrap_or_else(|| "LOD0".to_string()); // Jeśli nie znajdzie LOD w nazwie, zakłada LOD0
+
                 let lod_lvl = file_name
-                    .split('_')
-                    .find(|part| part.to_uppercase().contains("LOD"))
-                    .map(|s| s.split('.').next().unwrap_or(s).to_uppercase()) // Usuwamy kropkę z rozszerzeniem, jeśli LOD jest na końcu
-                    .unwrap_or_else(|| "LOD0".to_string()); // Jeśli nie znajdzie LOD w nazwie, zakłada LOD0
+                    .split(['_', '-', '.'])
+                    .find(|part| part.to_uppercase().starts_with("LOD"))
+                    .map(|s| s.to_uppercase())
+                    .unwrap_or_else(|| "LOD0".to_string());
 
                 plik_modelu.model.insert(lod_lvl, path_str);
             }
@@ -90,12 +118,12 @@ pub async fn handler_model_upload_to_server(
     let payload = get_model_stats_by_nameid(&name_id, &state.db).await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Błąd pobierania danych z bazy: {:?}", e)))?;
 
-    // 5. Aktualizacja w bazie – UPSERT robimy RAZ po zebraniu wszystkich LOD-ów i tekstury!
+    // Aktualizacja w bazie – UPSERT robimy RAZ po zebraniu wszystkich LOD-ów i tekstury!
     model_upsert_in_database(&state.db, &plik_modelu)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Błąd zapisu do bazy: {}", e)))?;
 
-    // 6. Wysłanie plików na frontend server
+    // Wysłanie plików na frontend server
     files_send_to_server(&vec_sciezki_plikow, &name_id)
         .await
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Błąd wysyłania plików na frontend: {}", e)))?;
@@ -113,25 +141,49 @@ pub async fn handler_model_upload_to_server(
     ))
 }
 
+// pub async fn model_upsert_in_database(pool: &SqlitePool, product: &Model) -> Result<(), sqlx::Error> {
+//
+//     // Zamieniamy BTreeMap na JSON (tak samo jak wcześniej)
+//     let model_json = serde_json::to_string(&product.model)
+//         .map_err(|e| sqlx::Error::Protocol(format!("Błąd serializacji JSON: {}", e)))?;
+//
+//     // Magia dzieje się w zapytaniu SQL:
+//     sqlx::query(
+//         r#"
+//         INSERT INTO models (product_id, texture_ao, model)
+//         VALUES (?, ?, ?)
+//         ON CONFLICT(product_id) DO UPDATE SET
+//             texture_ao = excluded.texture_ao,
+//             model = excluded.model
+//         "#
+//     )
+//         .bind(product.product_id)
+//         .bind(&product.texture_ao)
+//         .bind(model_json)
+//         .execute(pool)
+//         .await?;
+//
+//     Ok(())
+// }
 pub async fn model_upsert_in_database(pool: &SqlitePool, product: &Model) -> Result<(), sqlx::Error> {
-
-    // Zamieniamy BTreeMap na JSON (tak samo jak wcześniej)
+    // Zamiana BTreeMap na string JSON z LOD-ami
     let model_json = serde_json::to_string(&product.model)
         .map_err(|e| sqlx::Error::Protocol(format!("Błąd serializacji JSON: {}", e)))?;
 
-    // Magia dzieje się w zapytaniu SQL:
     sqlx::query(
         r#"
-        INSERT INTO models (product_id, texture_ao, model)
-        VALUES (?, ?, ?)
+        INSERT INTO models (product_id, texture_ao, model, texture_scale)
+        VALUES (?, ?, ?, ?)
         ON CONFLICT(product_id) DO UPDATE SET
             texture_ao = excluded.texture_ao,
-            model = excluded.model
+            model = excluded.model,
+            texture_scale = excluded.texture_scale
         "#
     )
         .bind(product.product_id)
         .bind(&product.texture_ao)
         .bind(model_json)
+        .bind(product.texture_scale)
         .execute(pool)
         .await?;
 
@@ -141,17 +193,22 @@ pub async fn model_upsert_in_database(pool: &SqlitePool, product: &Model) -> Res
 pub async fn get_model_stats_by_nameid(
     name_id: &str,
     pool: &SqlitePool,
-) -> Result<ModelPayload, sqlx::Error>{
+) -> Result<ModelPayload, sqlx::Error> {
     let model = sqlx::query_as::<_, ModelPayload>(
         "SELECT
-            name_id,
-            wood_qua AS wood,
-            metal_qua AS metal,
-            glass_qua AS glass
-        FROM products WHERE name_id = ?"
+            p.name_id,
+            p.wood_qua AS wood,
+            p.metal_qua AS metal,
+            p.glass_qua AS glass,
+            p.plastik_qua AS plastik,
+            COALESCE(m.texture_scale, 1.0) AS scale
+        FROM products p
+        LEFT JOIN models m ON p.id = m.product_id
+        WHERE p.name_id = ?"
     )
         .bind(name_id)
         .fetch_one(pool)
         .await?;
+
     Ok(model)
 }

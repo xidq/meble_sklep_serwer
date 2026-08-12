@@ -85,21 +85,21 @@ pub async fn handler_sync_models_json(
 
     let modele = sqlx::query_as::<_, ModelPayload>(
         "SELECT
-            name_id,
-            wood_qua AS wood,
-            metal_qua AS metal,
-            glass_qua AS glass
-        FROM products"
+            p.name_id,
+            p.wood_qua AS wood,
+            p.metal_qua AS metal,
+            p.glass_qua AS glass,
+            p.plastik_qua AS plastik,
+            COALESCE(m.texture_scale, 1.0) AS scale
+        FROM products p
+        LEFT JOIN models m ON p.id = m.product_id"
     )
         .fetch_all(&state.db)
         .await
-        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Błąd zbierania danych z bazy: {:?}",e)))?;
-
-
+        .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, format!("Błąd zbierania danych z bazy: {:?}", e)))?;
 
     Ok((
         StatusCode::OK,
         Json(modele),
     ))
-
 }

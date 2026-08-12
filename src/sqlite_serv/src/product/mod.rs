@@ -17,10 +17,12 @@ pub struct Product{
     pub wood_qua: f32,
     pub metal_qua: f32,
     pub glass_qua: f32,
+    pub plastik_qua: f32,
     pub price: f32,
     pub width: f32,
     pub height: f32,
     pub depth: f32,
+    pub texture_scale: f32
 }
 #[derive(Deserialize, Debug, Clone)]
 pub struct ProductUpdate {
@@ -36,6 +38,8 @@ pub struct ProductUpdate {
     pub width: Option<f32>,
     pub height: Option<f32>,
     pub depth: Option<f32>,
+    pub plastik_qua: Option<f32>,
+    pub texture_scale: Option<f32>,
 }
 
 impl Default for Product {
@@ -50,10 +54,12 @@ impl Default for Product {
             wood_qua: 0.0,
             metal_qua: 0.0,
             glass_qua: 0.0,
+            plastik_qua: 0.0,
             price: 0.0,
             width: 0.0,
             height: 0.0,
             depth: 0.0,
+            texture_scale: 1.0,
         }
     }
 }
@@ -122,6 +128,10 @@ impl Product{
         self.glass_qua = val;
         self
     }
+    pub fn add_plastik_qua(mut self, val:f32) -> Self {
+        self.plastik_qua = val;
+        self
+    }
     pub fn add_price(mut self, val:f32) -> Self {
         self.price = val;
         self
@@ -138,6 +148,10 @@ impl Product{
         self.depth = val;
         self
     }
+    pub fn add_texture_scale(mut self, val:f32) -> Self {
+        self.texture_scale = val;
+        self
+    }
 
     pub fn update(&mut self, change: ProductUpdate) {
         if let Some(val) = change.name_id { self.name_id = val; }
@@ -148,10 +162,12 @@ impl Product{
         if let Some(val) = change.wood_qua { self.wood_qua = val; }
         if let Some(val) = change.metal_qua { self.metal_qua = val; }
         if let Some(val) = change.glass_qua { self.glass_qua = val; }
+        if let Some(val) = change.plastik_qua { self.plastik_qua = val; }
         if let Some(val) = change.price { self.price = val; }
         if let Some(val) = change.width { self.width = val; }
         if let Some(val) = change.height { self.height = val; }
         if let Some(val) = change.depth { self.depth = val; }
+        if let Some(val) = change.texture_scale { self.texture_scale = val; }
     }
 }
 

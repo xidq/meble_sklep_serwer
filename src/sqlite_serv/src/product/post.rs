@@ -27,9 +27,9 @@ pub async fn put_product_new(pool: &SqlitePool, new_product: &Product) -> Result
         r#"
         INSERT INTO products (
             name_id, name_pl, name_en, desc_pl, desc_en,
-            wood_qua, metal_qua, glass_qua, price,
+            wood_qua, metal_qua, glass_qua, plastik_qua, price,
             width, height, depth
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         "#
     )
         .bind(&new_product.name_id)
@@ -40,6 +40,7 @@ pub async fn put_product_new(pool: &SqlitePool, new_product: &Product) -> Result
         .bind(new_product.wood_qua)
         .bind(new_product.metal_qua)
         .bind(new_product.glass_qua)
+        .bind(new_product.plastik_qua)
         .bind(new_product.price)
         .bind(new_product.width)
         .bind(new_product.height)

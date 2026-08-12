@@ -25,3 +25,4 @@ anyhow = { workspace = true }
 
 env_thingy = { path = "../env_thingy" }
 colored = { workspace = true }
+console-subscriber = { workspace = true }

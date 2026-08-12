@@ -15,15 +15,41 @@ pub async fn handler_get_products_list(
     let products = get_products_list(&state.db)
         .await
         .map_err(|e| {
-            eprintln!("Błąd bazy danych przy pobieraniu listy: {}", e);
+            eprintln!("Błąd bazy danych przy pobieraniu listy (products): {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
         })?;
 
     // Jeśli wszystko poszło dobrze, zwracamy status 200 i listę zapakowaną w JSON
     Ok((StatusCode::OK, Json(products)))
 }
+// pub async fn get_products_list(pool: &SqlitePool) -> Result<Vec<Product>, sqlx::Error> {
+//     let products = sqlx::query_as::<_, Product>("SELECT * FROM products")
+//         .fetch_all(pool)
+//         .await?;
+//
+//     Ok(products)
+// }
 pub async fn get_products_list(pool: &SqlitePool) -> Result<Vec<Product>, sqlx::Error> {
-    let products = sqlx::query_as::<_, Product>("SELECT * FROM products")
+    let products = sqlx::query_as::<_, Product>(
+        "SELECT
+            p.id,
+            p.name_id,
+            p.name_pl,
+            p.name_en,
+            p.desc_pl,
+            p.desc_en,
+            p.wood_qua,
+            p.metal_qua,
+            p.glass_qua,
+            p.plastik_qua,
+            p.price,
+            p.width,
+            p.height,
+            p.depth,
+            COALESCE(m.texture_scale, 1.0) AS texture_scale
+        FROM products p
+        LEFT JOIN models m ON p.id = m.product_id"
+    )
         .fetch_all(pool)
         .await?;
 
@@ -43,7 +69,7 @@ pub async fn handler_get_products_data_by_id(
             (StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
         })?;
 
-    // Jeśli wszystko poszło dobrze, zwracamy status 200 i listę zapakowaną w JSON
+
     Ok((StatusCode::OK, Json(products)))
 }
 
@@ -64,14 +90,43 @@ pub async fn handler_get_products_data_by_nameid(
     // Jeśli wszystko poszło dobrze, zwracamy status 200 i listę zapakowaną w JSON
     Ok((StatusCode::OK, Json(products)))
 }
+// pub async fn get_products_data_by_id(id: i64, pool: &SqlitePool) -> Result<Product, sqlx::Error> {
+//
+//     let product = sqlx::query_as::<_, Product>("SELECT * FROM products WHERE id = ?")
+//         .bind(id)
+//         .fetch_one(pool)
+//         .await?;
+//
+//     Ok(product)
+// }
 pub async fn get_products_data_by_id(id: i64, pool: &SqlitePool) -> Result<Product, sqlx::Error> {
-
-    let product = sqlx::query_as::<_, Product>("SELECT * FROM products WHERE id = ?")
+    let product = sqlx::query_as::<_, Product>(
+        "SELECT
+            p.id,
+            p.name_id,
+            p.name_pl,
+            p.name_en,
+            p.desc_pl,
+            p.desc_en,
+            p.wood_qua,
+            p.metal_qua,
+            p.glass_qua,
+            p.plastik_qua,
+            p.price,
+            p.width,
+            p.height,
+            p.depth,
+            COALESCE(m.texture_scale, 1.0) AS texture_scale
+        FROM products p
+        LEFT JOIN models m ON p.id = m.product_id
+        WHERE p.id = ?"
+    )
         .bind(id)
         .fetch_one(pool)
         .await?;
 
     Ok(product)
+
 }
 pub async fn get_products_nameid_by_id(id: i64, pool: &SqlitePool) -> Result<String, sqlx::Error> {
 

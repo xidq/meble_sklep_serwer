@@ -14,8 +14,8 @@ use env_thingy::{OnceLockExt, GOVERNOR_BURST_SIZE, GOVERNOR_RATE_LIMIT};
 /// [GET, POST, PUT and DELETE]
 pub fn build_router(state: AppState) -> Router {
 
-    let rate_limit = if cfg!(test){2} else {*GOVERNOR_RATE_LIMIT.v("")};
-    let burst_size = if cfg!(test){5} else {*GOVERNOR_BURST_SIZE.v("")};
+    // let rate_limit = if cfg!(test){2} else {*GOVERNOR_RATE_LIMIT.v("")};
+    // let burst_size = if cfg!(test){5} else {*GOVERNOR_BURST_SIZE.v("")};
 
     let cors = CorsLayer::new()
         .allow_origin(Any)
@@ -27,8 +27,8 @@ pub fn build_router(state: AppState) -> Router {
     let governor_conf = Arc::new(
         GovernorConfigBuilder::default()
             .key_extractor(SmartIpKeyExtractor) // <-- tu
-            .per_second(rate_limit)
-            .burst_size(burst_size)
+            // .per_second(rate_limit)
+            // .burst_size(burst_size)
             // .use_headers()
             .finish()
             .unwrap()
@@ -43,6 +43,10 @@ pub fn build_router(state: AppState) -> Router {
         .route(
             "/usr/login",
             post(websocet::login_handler)
+        )
+        .route(
+            "/health",
+            get(sqlite_serv::health_check_handler)
         )
         .route(
             "/usr/usr",
@@ -132,10 +136,14 @@ pub fn build_router(state: AppState) -> Router {
             post(sqlite_serv::zamowienia::post::handle_put_order_new)
         )
         .route(
+            "/api/order/get_distance",
+            get(sqlite_serv::odleglosci_mapa::get::handler_order_distance_to_client)
+        )
+        .route(
             "/api/images/upload/{item_name_id}",
             post(sqlite_serv::foto::upload::handler_image_upload_to_server)
         )
-        .layer(DefaultBodyLimit::max(10 * 1024 * 1024))
+        .layer(DefaultBodyLimit::max(100 * 1024 * 1024))
         // rate limiter jest na innym serwerze, a komunikacja pomiędzy serwerami fajnie jakby była nie ograniczona
         // rate-limiter
         .layer(governor_layer)
