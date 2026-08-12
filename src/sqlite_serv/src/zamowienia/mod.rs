@@ -1,105 +1,79 @@
-pub mod post;
 pub mod get;
+pub mod post;
 pub mod put;
 // mod ksef;
 
 use chrono::{Datelike, Local};
+use rust_decimal::{dec, Decimal};
 use serde::{Deserialize, Serialize};
-use sqlx::{FromRow, SqlitePool};
+use sqlx::sqlite::SqliteRow;
+use sqlx::{FromRow, Row, SqlitePool};
+use std::str::FromStr;
 use strum::Display;
-
+fn get_decimal(row: &SqliteRow, col: &str) -> Decimal {
+    row.try_get::<String, _>(col)
+        .ok()
+        .and_then(|s| Decimal::from_str(&s).ok())
+        .unwrap_or_default()
+}
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct CaloscioweZamowienie<T>{
-    dane: Zamowienie<T>,
-    przedmioty: Vec<ZamowieniePozycja<T>>,
+pub struct CaloscioweZamowienie {
+    dane: Zamowienie,
+    przedmioty: Vec<ZamowieniePozycja>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Pieniadze{
-    dziesiatki: i64,
-    grosze: u8,
-    waluta: Waluta,
-}
-
-impl Default for Pieniadze{
-    fn default() -> Self {
-        Pieniadze{
-            dziesiatki: 0,
-            grosze: 0,
-            waluta: Waluta::Pln,
-        }
-    }
-}
-
-impl Pieniadze {
-    pub fn new(kwota: f64, waluta: Waluta) -> Pieniadze {
-
-        // let rewaloryzacja = kwota * waluta.get_multi();
-        // Zabezpieczenie przed ujemnymi wartościami lub NaN można obsłużyć według uznania
-        let calkowite = kwota.trunc() as i64;
-        // Mnożymy przez 100 i bierzemy resztę z dzielenia, aby uzyskać grosze
-        let grosze = (kwota.fract() * 100.0).abs().round() as u8;
-
-        Pieniadze {
-            dziesiatki: calkowite,
-            grosze,
-            waluta,
-        }
-    }
-    pub fn to_float(&self) -> f64 {
-        self.dziesiatki as f64 + (self.grosze as f64 / 100.)
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash, sqlx::Type)]
+#[sqlx(type_name = "TEXT", rename_all = "lowercase")]
 pub enum Waluta{
     Pln,
     Eur,
-    Dol
+    Dol,
 }
 impl Waluta{
-    pub fn get_multi(&self) -> f64 {
+    pub fn get_multi(&self) -> Decimal {
         match self {
-            Self::Pln => 1.0,
-            Self::Eur => 4.30,
-            Self::Dol => 3.97
+            Self::Pln => dec!(1.0),
+            Self::Eur => dec!(4.30),
+            Self::Dol => dec!(3.97),
         }
     }
     pub fn get_name(&self) -> &'static str {
         match self {
             Self::Pln => "pln",
             Self::Eur => "eur",
-            Self::Dol => "dol"
+            Self::Dol => "dol",
         }
     }
 }
 #[derive(Serialize, Deserialize, Debug, Clone, Display, sqlx::Type)]
 #[sqlx(type_name = "TEXT")]
-pub enum StatusOplacenia{
+pub enum StatusOplacenia {
     Nieoplacone,
     Czesciowo,
     Oplacone,
-    Zwrot
+    Zwrot,
 }
 #[derive(Serialize, Deserialize, Debug, Clone, Display, sqlx::Type)]
 #[sqlx(type_name = "TEXT")]
-pub enum StatusZamowienia{
+pub enum StatusZamowienia {
     ZamowieniePrzyjete,
     Wprzygotowaniu,
     OczekujeNaWysylke,
     Wpodrozy,
-    Dostarczone
+    Dostarczone,
 }
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct AdminZamowieniaListView {
     id: i64,
     user_id: i64,
     date: String,
-    cena: f64,
-    vat: f64,
+    #[serde(with = "rust_decimal::serde::str")]
+    cena: Decimal,
+    #[serde(with = "rust_decimal::serde::str")]
+    vat: Decimal,
     numer_fv: String,
     oplacone: StatusOplacenia,
-    status: StatusZamowienia
+    status: StatusZamowienia,
 }
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct AdminZamowieniaItemView {
@@ -116,7 +90,7 @@ pub struct AdminZamowieniaItemView {
     pub nazwisko: String,
 }
 #[derive(Serialize, Deserialize, FromRow, Debug, Clone)]
-pub struct Zamowienie<T> {
+pub struct Zamowienie {
     pub id: i64,
     pub date: String,
     pub email: Option<String>,
@@ -128,14 +102,19 @@ pub struct Zamowienie<T> {
     pub faktura_dane: Option<ZamowienieFV>,
     #[serde(flatten)]
     pub transport: Option<DaneTransportu>,
-    pub vat: T, //kwota vat
+    #[serde(with = "rust_decimal::serde::str")]
+    // #[sqlx(try_from = "String")]
+    pub vat: Decimal, //kwota vat
     pub numer_fv: String,
     pub oplacone: StatusOplacenia,
     pub status: StatusZamowienia,
-    pub cena: T, //kwota netto
+    #[serde(with = "rust_decimal::serde::str")]
+    // #[sqlx(try_from = "String")]
+    pub cena: Decimal, //kwota netto
     pub user_id: Option<i64>,
     pub imie: String,
     pub nazwisko: String,
+    pub waluta: Waluta,
 }
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct ZamowienieLokacja {
@@ -148,15 +127,15 @@ pub struct ZamowienieLokacja {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct DaneTransportu {
     pub odleglosc_km: f64,
-    pub cena_netto: f64,
-    pub stawka_vat: f64,
+    #[serde(with = "rust_decimal::serde::str")]
+    // #[sqlx(try_from = "String")]
+    pub cena_netto: Decimal,
+    #[serde(with = "rust_decimal::serde::str")]
+    // #[sqlx(try_from = "String")]
+    pub stawka_vat: Decimal,
 }
 impl DaneTransportu {
-    pub fn new(
-        odleglosc_km: f64,
-        cena_netto: f64,
-        stawka_vat: f64,
-    ) -> Self {
+    pub fn new(odleglosc_km: f64, cena_netto: Decimal, stawka_vat: Decimal) -> Self {
         Self{
             odleglosc_km,
             cena_netto,
@@ -165,7 +144,7 @@ impl DaneTransportu {
     }
 }
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct ZamowienieFV{
+pub struct ZamowienieFV {
     #[serde(alias = "fv_ulica")]
     pub ulica: Option<String>,
     #[serde(alias = "fv_miasto")]
@@ -177,17 +156,21 @@ pub struct ZamowienieFV{
 }
 
 #[derive(Serialize, Deserialize, FromRow, Debug, Clone)]
-pub struct ZamowieniePozycja<T>{
+pub struct ZamowieniePozycja {
     #[serde(skip_deserializing)]
     pub zamowienie_id: i64, //id z Zamowienie
     pub product_id: i64,
     pub ilosc: i64,
-    pub cena: T,
-    pub vat: T,
+    #[serde(with = "rust_decimal::serde::str")]
+    // #[sqlx(try_from = "String")]
+    pub cena: Decimal,
+    #[serde(with = "rust_decimal::serde::str")]
+    // #[sqlx(try_from = "String")]
+    pub vat: Decimal,
     pub konfiguracja: serde_json::Value,
 }
 #[derive(sqlx::FromRow)]
-struct LastOrderData{
+struct LastOrderData {
     _date: String,
     numer_fv: String,
 }
@@ -214,87 +197,78 @@ pub async fn generate_fv_number(pool: &SqlitePool) -> Result<String, sqlx::Error
         1
     };
 
-    Ok(format!("FV/{:02}/{}/{:03}", current_month, current_year, new_number))
+    Ok(format!(
+        "FV/{:02}/{}/{:03}",
+        current_month, current_year, new_number
+    ))
 }
 async fn get_last_order_number(pool: &SqlitePool) -> Result<Option<LastOrderData>, sqlx::Error> {
-    sqlx::query_as::<_, LastOrderData>(
-        "SELECT date, numer_fv FROM orders ORDER BY id DESC LIMIT 1"
-    )
+    sqlx::query_as::<_, LastOrderData>("SELECT date, numer_fv FROM orders ORDER BY id DESC LIMIT 1")
         .fetch_optional(pool)
         .await
 }
 
-impl Default for Zamowienie<Pieniadze> {
+impl Default for Zamowienie {
     fn default() -> Self {
         Self{
             id: 0,
             user_id: None,
             imie: String::new(),
             nazwisko: String::new(),
-            date: chrono::Local::now().format("%Y-%m-%d | %H:%M:%S").to_string(),
+            date: chrono::Local::now()
+                .format("%Y-%m-%d | %H:%M:%S")
+                .to_string(),
             email: None,
             tel: None,
             lokacja: ZamowienieLokacja::default(),
             faktura_dane: None,
             transport: None,
-            cena: Pieniadze::default(), // kwota netto
-            vat: Pieniadze::default(),  // kwota vat
+            cena: Decimal::ZERO,
+            vat: Decimal::ZERO,
+            waluta: Waluta::Pln,
             numer_fv: String::new(),
             oplacone: StatusOplacenia::Nieoplacone,
             status: StatusZamowienia::ZamowieniePrzyjete,
         }
     }
 }
-impl Zamowienie<Pieniadze> {
-    pub fn new(
-        // user_id: Option<i64>,
-        // email: Option<impl Into <String>>,
-        // tel: Option<impl Into <String>>,
-        // lokacja: ZamowienieLokacja,
-        // faktura_dane: Option<ZamowienieFV>,
-        // transport: Option<DaneTransportu>,
-        // imie: String,
-        // nazwisko: String,
-        // cena: Pieniadze,
-        // vat: Pieniadze,
-        // pool: &SqlitePool,
-    ) -> Self{
-
+impl Zamowienie {
+    pub fn new() -> Self {
         Self::default()
     }
-    pub fn add_user_id(mut self, val: Option<i64>) -> Self{
+    pub fn add_user_id(mut self, val: Option<i64>) -> Self {
         self.user_id = val;
         self
     }
-    pub fn add_email(mut self, val: Option<impl Into <String>>) -> Self{
+    pub fn add_email(mut self, val: Option<impl Into <String>>) -> Self {
         self.email = val.map(|e| e.into());
         self
     }
-    pub fn add_tel(mut self, val: Option<impl Into <String>>) -> Self{
+    pub fn add_tel(mut self, val: Option<impl Into <String>>) -> Self {
         self.tel = val.map(|e| e.into());
         self
     }
-    pub fn add_fv(mut self, val: Option<ZamowienieFV>) -> Self{
+    pub fn add_fv(mut self, val: Option<ZamowienieFV>) -> Self {
         self.faktura_dane = val;
         self
     }
-    pub fn add_transport(mut self, val: Option<DaneTransportu>) -> Self{
+    pub fn add_transport(mut self, val: Option<DaneTransportu>) -> Self {
         self.transport = val;
         self
     }
-    pub fn add_imie(mut self, val: String) -> Self{
+    pub fn add_imie(mut self, val: String) -> Self {
         self.imie = val;
         self
     }
-    pub fn add_nazwisko(mut self, val: String) -> Self{
+    pub fn add_nazwisko(mut self, val: String) -> Self {
         self.nazwisko = val;
         self
     }
-    pub fn add_cena(mut self, val: Pieniadze) -> Self{
+    pub fn add_cena(mut self, val: Decimal) -> Self {
         self.cena = val;
         self
     }
-    pub fn add_vat(mut self, val: Pieniadze) -> Self{
+    pub fn add_vat(mut self, val: Decimal) -> Self {
         self.vat = val;
         self
     }
@@ -303,7 +277,7 @@ impl Zamowienie<Pieniadze> {
         self.numer_fv = numer;
         self
     }
-    pub fn add_lokacja(mut self, val: ZamowienieLokacja) -> Self{
+    pub fn add_lokacja(mut self, val: ZamowienieLokacja) -> Self {
         self.lokacja = val;
         self
     }

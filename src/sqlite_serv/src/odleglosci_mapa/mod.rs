@@ -1,6 +1,9 @@
+pub mod get;
+
 use anyhow::anyhow;
 use serde::Deserialize;
 use reqwest::header::USER_AGENT;
+use rust_decimal::{dec, Decimal};
 use crate::zamowienia::DaneTransportu;
 
 // Współrzędne Twojego sklepu/magazynu (np. Rybnik, Polska)
@@ -89,18 +92,18 @@ pub async fn oblicz_odleglosc_do_klienta(
         .ok_or_else(|| anyhow!("Nie udało się wyznaczyć trasy drogowej do podanego adresu"))?;
 
     // Przeliczamy metry na kilometry i zaokrąglamy do 1 miejsca po przecinku (np. 12.4 km)
-    let odleglosc_km = route.distance / 1000.0;
-    let odleglosc_km_zaokr = (odleglosc_km * 10.0).round() / 10.0;
+    let odleglosc_km = Decimal::new(route.distance as i64, 4);
+    // let odleglosc_km_zaokr = (odleglosc_km * 10.0).round() / 10.0;
 
-    let spalanie_na_100km = 12.5;
-    let paliwo_cena = 6.99;
-    let margines = 0.1; // %
-    let sum_km = odleglosc_km_zaokr * 2.;
-    let wynagrodzenie_za_km = 7.;
-    let paliwo = paliwo_cena * (spalanie_na_100km / 100.);
+    let spalanie_na_1km = Decimal::new(125, 3);
+    let paliwo_cena = Decimal::new(699, 2);
+    let margines = Decimal::new(11, 1); // %
+    let sum_km = odleglosc_km * dec!(2.0);
+    let wynagrodzenie_za_km = Decimal::new(7, 0);
+    let paliwo = paliwo_cena * spalanie_na_1km;
     let dodatek = wynagrodzenie_za_km * sum_km;
-    let kwota_za_trase = (paliwo * sum_km) * (1. + margines) + dodatek;
-    let out = DaneTransportu::new(odleglosc_km_zaokr,kwota_za_trase,23.);
+    let kwota_za_trase = (paliwo * sum_km) * margines + dodatek;
+    let out = DaneTransportu::new(f64::try_from(odleglosc_km)?, kwota_za_trase, Decimal::new(23, 2));
     Ok(out)
 
 }

@@ -23,6 +23,9 @@ use tokio::sync::broadcast;
 /// Main fn of such server
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+
+    console_subscriber::init();
+
     load_env_data()?;
 
     let db_url = DATABASE_URL.v("");

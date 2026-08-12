@@ -23,6 +23,8 @@ pub async fn handle_edit_product(
     Ok(StatusCode::NO_CONTENT)
 }
 pub async fn edit_product(pool: &SqlitePool, product: &Product) -> Result<(), sqlx::Error> {
+    let mut tx = pool.begin().await?;
+
     sqlx::query(
         r#"
         UPDATE products
@@ -35,6 +37,7 @@ pub async fn edit_product(pool: &SqlitePool, product: &Product) -> Result<(), sq
             wood_qua = ?,
             metal_qua = ?,
             glass_qua = ?,
+            plastik_qua = ?,
             price = ?,
             width = ?,
             height = ?,
@@ -50,13 +53,31 @@ pub async fn edit_product(pool: &SqlitePool, product: &Product) -> Result<(), sq
         .bind(product.wood_qua)
         .bind(product.metal_qua)
         .bind(product.glass_qua)
+        .bind(product.plastik_qua)
         .bind(product.price)
         .bind(product.width)
         .bind(product.height)
         .bind(product.depth)
-        .bind(product.id) // To ID z lokacji WHERE
-        .execute(pool)
+        .bind(product.id)
+        .execute(&mut *tx)
         .await?;
+
+    // Używamy INSERT INTO ... ON CONFLICT (UPSERT), gdyby rekord w models jeszcze nie istniał
+    sqlx::query(
+        r#"
+        INSERT INTO models (product_id, model, texture_scale)
+        VALUES (?, '', ?)
+        ON CONFLICT(product_id) DO UPDATE SET
+            texture_scale = excluded.texture_scale
+        "#
+    )
+        .bind(product.id)
+        .bind(product.texture_scale)
+        .execute(&mut *tx)
+        .await?;
+
+
+    tx.commit().await?;
 
     Ok(())
 }

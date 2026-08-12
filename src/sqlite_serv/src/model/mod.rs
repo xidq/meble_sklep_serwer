@@ -15,6 +15,7 @@ pub struct Model{
     pub texture_ao: Option<String>,
     #[serde(flatten)]
     pub model: BTreeMap<Lod, String>,
+    pub texture_scale: f64,
 }
 
 // impl<'r> FromRow<'r, sqlx::sqlite::SqliteRow> for Model {
@@ -49,6 +50,8 @@ pub struct ModelPayload{
     pub wood: f64,
     pub metal: f64,
     pub glass: f64,
+    pub plastik: f64,
+    pub scale: f64,
 }
 #[derive(Serialize, Deserialize,  Debug, Clone, FromRow)]
 pub struct AllModelPayload{
@@ -59,6 +62,7 @@ impl<'r> FromRow<'r, sqlx::sqlite::SqliteRow> for Model {
     fn from_row(row: &'r sqlx::sqlite::SqliteRow) -> Result<Self, sqlx::Error> {
         let product_id: i64 = row.try_get("product_id")?;
         let texture_ao: Option<String> = row.try_get("texture_ao")?;
+        let texture_scale: f64 = row.try_get("texture_scale")?;
 
         // 1. Wyciągamy kolumnę "model" jako zwykły String
         let model_str: String = row.try_get("model")?;
@@ -71,6 +75,7 @@ impl<'r> FromRow<'r, sqlx::sqlite::SqliteRow> for Model {
             product_id,
             texture_ao,
             model,
+            texture_scale,
         })
     }
 }

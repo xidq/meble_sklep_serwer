@@ -1,22 +1,22 @@
-use crate::AppState;
 use crate::auth::claims::Claims;
 use crate::auth::permissions::check_is_admin;
-use crate::zamowienia::{CaloscioweZamowienie, Pieniadze, Waluta};
-use axum::Json;
+use crate::zamowienia::CaloscioweZamowienie;
+use crate::AppState;
 use axum::extract::State;
+use axum::Json;
 use http::StatusCode;
 
 pub async fn handle_admin_edit_orders(
     State(state): State<AppState>,
     claims: Claims,
-    Json(zamowienie): Json<CaloscioweZamowienie<f64>>,
+    Json(zamowienie): Json<CaloscioweZamowienie>,
 ) -> Result<StatusCode, (StatusCode, String)> {
     println!("Odebrano żądanie zmiany zamowienia id: {}", zamowienie.dane.id);
 
     check_is_admin(&claims)?;
 
-    let cena_pieniadze = Pieniadze::new(zamowienie.dane.cena, Waluta::Pln);
-    let vat_pieniadze = Pieniadze::new(zamowienie.dane.vat, Waluta::Pln);
+    // let cena_pieniadze = Pieniadze::new(zamowienie.dane.cena, Waluta::Pln);
+    // let vat_pieniadze = Pieniadze::new(zamowienie.dane.vat, Waluta::Pln);
 
     // let dane = &zamowienie.dane;
     // let f_dane = dane.faktura_dane.as_ref();
@@ -48,10 +48,8 @@ pub async fn handle_admin_edit_orders(
             odleglosc_km = ?,
             cena_netto = ?,
             transport_stawka_vat = ?,
-            cena_dziesiatki = ?,
-            cena_grosze = ?,
-            vat_dziesiatki = ?,
-            vat_grosze = ?,
+            cena = ?,
+            vat = ?,
             waluta = ?,
             numer_fv = ?,
             oplacone = ?,
@@ -77,14 +75,12 @@ pub async fn handle_admin_edit_orders(
         .bind(zamowienie.dane.faktura_dane.as_ref().and_then(|f| f.kod_pocztowy.as_ref()))
         // Dane transportu (Option)
         .bind(zamowienie.dane.transport.as_ref().map(|t| t.odleglosc_km))
-        .bind(zamowienie.dane.transport.as_ref().map(|t| t.cena_netto))
-        .bind(zamowienie.dane.transport.as_ref().map(|t| t.stawka_vat))
+        .bind(zamowienie.dane.transport.as_ref().map(|t| t.cena_netto.to_string()))
+        .bind(zamowienie.dane.transport.as_ref().map(|t| t.stawka_vat.to_string()))
         // Kwoty rozbite na Pieniadze
-        .bind(cena_pieniadze.dziesiatki)
-        .bind(cena_pieniadze.grosze)
-        .bind(vat_pieniadze.dziesiatki)
-        .bind(vat_pieniadze.grosze)
-        .bind(Waluta::Pln.get_name())
+        .bind(zamowienie.dane.cena.to_string())
+        .bind(zamowienie.dane.vat.to_string())
+        .bind(zamowienie.dane.waluta.get_name())
         // Statusy i numery
         .bind(&zamowienie.dane.numer_fv)
         .bind(&zamowienie.dane.oplacone)
